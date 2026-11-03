@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>พี่ภูมิ ติวคณิต-ฟิสิกส์ A-Level | สยามสแควร์ และออนไลน์</title>
+  <meta name="description" content="ติวคณิตศาสตร์และฟิสิกส์ A-Level ตัวต่อตัวและกลุ่มเล็ก ที่สยามสแควร์หรือออนไลน์ ทดลองเรียนฟรี 30 นาที">
+  <meta property="og:title" content="พี่ภูมิ ติวคณิต-ฟิสิกส์ A-Level">
+  <meta property="og:description" content="เข้าใจจริง ไม่ใช่จำสูตร ทดลองเรียนฟรี 30 นาที">
+  <meta property="og:image" content="img/siam.jpg">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48'%3E%3Ccircle cx='24' cy='24' r='22' fill='white' stroke='%23D9473F' stroke-width='4'/%3E%3Ccircle cx='24' cy='24' r='12' fill='%231C2B4B'/%3E%3C/svg%3E">
+
+  <!-- Anuphan: clean Thai for everything.
+       Sriracha: Thai handwriting, used only for "red pen" notes, like a tutor marking your paper. -->
+  <link href="https://fonts.googleapis.com/css2?family=Chonburi&family=Sarabun:wght@400;500;700&family=Sriracha&display=swap" rel="stylesheet">
+
+  <style>
+    /* ---------- Colors from a Thai exam answer sheet + a notebook ---------- */
+    :root {
+      --ink:    #1C2B4B;   /* navy, main text */
+      --red:    #D9473F;   /* printed answer-sheet red, also the "red pen" */
+      --pencil: #3E3E3E;   /* 2B pencil */
+      --line:   #DCE6F2;   /* notebook ruled lines */
+      --soft:   #F5F7FB;
+      --marker: #FFE45C;   /* highlighter, only for the correct answer */
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: "Anuphan", sans-serif; color: var(--ink); background: #fff; line-height: 1.7; font-size: 17px; }
+    img { display: block; width: 100%; height: 100%; object-fit: cover; }
+    a { color: inherit; }
+    .wrap { max-width: 1080px; margin: 0 auto; padding-inline: 20px; }   /* side padding only, so sections keep their top/bottom space */
+    .nb { white-space: nowrap; }
+    h1, h2 { font-weight: 700; line-height: 1.3; text-wrap: balance; }
+    h2 { font-size: clamp(1.6rem, 5vw, 2.2rem); margin-bottom: 8px; }
+    .lead { color: #4B5876; max-width: 36em; }
+    .pen { font-family: "Sriracha", cursive; color: var(--red); }   /* handwritten red-pen note */
+    section { padding-block: 72px; }
+
+    .btn { display: inline-block; text-decoration: none; font-weight: 700; padding: 12px 22px; border-radius: 8px; border: 2px solid var(--ink); }
+    .btn-line { background: #06C755; border-color: #06C755; color: #fff; }
+    .btn-plain { background: #fff; }
+
+    /* ---------- 1. Header ---------- */
+    header { border-bottom: 1px solid var(--line); background: #fff; position: sticky; top: 0; z-index: 10; }
+    header .wrap { display: flex; justify-content: space-between; align-items: center; height: 64px; }
+    .name { font-weight: 700; font-size: 1.15rem; text-decoration: none; }
+    .name span { color: #6B7690; font-weight: 400; font-size: .9rem; margin-left: 6px; }
+    header .btn { padding: 8px 16px; font-size: .95rem; }
+
+    /* ---------- 2. Hero: words left, tutor's notebook right ---------- */
+    .hero { padding-block: 48px 64px; }
+    .hero .wrap { display: grid; gap: 36px; align-items: center; }
+    @media (min-width: 860px) { .hero .wrap { grid-template-columns: 1.05fr 1fr; } }
+    .hero h1 { font-size: clamp(2.1rem, 7vw, 3.3rem); }
+    .hero .lead { font-size: 1.1rem; margin: 14px 0 24px; }
+    .hero .btns { display: flex; flex-wrap: wrap; gap: 10px; }
+
+    /* Trust card (Preply style): who, how long, how many */
+    .tutor { display: flex; gap: 14px; align-items: center; margin-top: 28px; padding: 14px; border: 1px solid var(--line); border-radius: 12px; max-width: 30em; }
+    .avatar { flex: none; width: 56px; height: 56px; border-radius: 50%; background: var(--ink); color: #fff; display: grid; place-items: center; font-weight: 700; font-size: 1.4rem; }
+    .tutor strong { display: block; }
+    .tutor small { color: #6B7690; font-size: .88rem; line-height: 1.5; display: block; }
+
+    /* The notebook page */
+    .notebook {
+      position: relative; padding: 30px 24px 28px 64px; border-radius: 6px;
+      background: #fff repeating-linear-gradient(#fff 0 35px, var(--line) 35px 36px);
+      box-shadow: 0 1px 2px rgba(0,0,0,.06), 0 12px 30px rgba(28,43,75,.10);
+      transform: rotate(1.2deg);
+    }
+    .notebook::before { content: ""; position: absolute; top: 0; bottom: 0; left: 46px; width: 2px; background: #F2B8B4; }  /* margin line */
+    .notebook .hw { font-family: "Sriracha", cursive; color: var(--pencil); font-size: 1.2rem; line-height: 36px; }
+    .notebook .hw.red { color: var(--red); }
+    .notebook svg { width: 100%; max-width: 260px; height: auto; display: block; margin: 4px 0; }
+
+    /* ---------- 3. Try a question (the signature) ---------- */
+    .try { background: var(--soft); }
+    .sheet { margin-top: 28px; background: #fff; border: 2px solid var(--red); border-radius: 10px; overflow: hidden; max-width: 760px; }
+    .sheet-head { background: var(--red); color: #fff; padding: 8px 18px; font-weight: 500; font-size: .92rem; display: flex; justify-content: space-between; }
+    .sheet-body { padding: 22px 20px 26px; }
+    .q { font-size: 1.15rem; font-weight: 500; }
+    .q sub { font-size: .7em; }
+    .bubbles { display: flex; flex-wrap: wrap; gap: 12px 18px; margin: 20px 0 6px; }
+    .bubble { display: flex; align-items: center; gap: 8px; cursor: pointer; font: inherit; background: none; border: 0; color: inherit; padding: 4px; border-radius: 6px; }
+    .bubble .o {
+      width: 34px; height: 34px; border-radius: 50%; border: 2px solid var(--red); color: var(--red);
+      display: grid; place-items: center; font-size: .85rem; font-weight: 700; transition: background .15s;
+    }
+    .bubble.picked .o { background: var(--pencil); border-color: var(--pencil); color: var(--pencil); }  /* filled in with 2B pencil */
+    .bubble.right .val { background: var(--marker); padding: 0 4px; }
+    .bubble:focus-visible { outline: 3px solid var(--ink); }
+    .feedback { margin-top: 16px; padding-top: 16px; border-top: 1.5px dashed var(--line); display: none; }
+    .feedback.show { display: block; }
+    .feedback .pen { font-size: 1.25rem; line-height: 1.6; }
+    .feedback ol { margin: 10px 0 0 1.2em; }
+    .feedback li { margin: 4px 0; }
+
+    /* ---------- 4. Courses & prices ---------- */
+    .course { display: grid; grid-template-columns: 1fr auto; gap: 4px 16px; padding: 18px 0; border-bottom: 1px solid var(--line); }
+    .course:first-of-type { border-top: 2px solid var(--ink); margin-top: 24px; }
+    .course h3 { font-size: 1.1rem; font-weight: 700; }
+    .course p { color: #4B5876; font-size: .95rem; grid-column: 1; }
+    .course .price { grid-row: 1 / span 2; grid-column: 2; text-align: right; font-weight: 700; font-size: 1.25rem; }
+    .course .price small { display: block; font-weight: 400; font-size: .82rem; color: #6B7690; }
+
+    /* ---------- 5. Results board (OnDemand style, names only) ---------- */
+    .results { display: grid; gap: 12px; margin-top: 24px; }
+    @media (min-width: 760px) { .results { grid-template-columns: repeat(3, 1fr); } }
+    .result { border: 1.5px solid var(--line); border-left: 5px solid var(--red); border-radius: 8px; padding: 14px 16px; }
+    .result .who { font-weight: 700; }
+    .result .where { color: #4B5876; font-size: .95rem; }
+    .result .score { margin-top: 6px; font-size: .92rem; }
+    .result .score b { font-size: 1.15rem; }
+    .note-small { color: #6B7690; font-size: .85rem; margin-top: 12px; }
+
+    /* ---------- 6. Where to study ---------- */
+    .where { display: grid; gap: 28px; align-items: center; }
+    @media (min-width: 860px) { .where { grid-template-columns: 1fr 1fr; } }
+    .where .photo { aspect-ratio: 1; border-radius: 12px; overflow: hidden; }
+    .place { padding: 14px 0; border-bottom: 1px solid var(--line); }
+    .place strong { display: block; }
+    .place span { color: #4B5876; font-size: .95rem; }
+
+    /* ---------- 7. Steps (a real sequence, so numbers make sense) ---------- */
+    .steps { display: grid; gap: 18px; margin-top: 24px; counter-reset: s; }
+    @media (min-width: 760px) { .steps { grid-template-columns: repeat(3, 1fr); } }
+    .step { counter-increment: s; }
+    .step::before { content: counter(s); display: grid; place-items: center; width: 40px; height: 40px; border-radius: 50%; border: 2px solid var(--red); color: var(--red); font-weight: 700; margin-bottom: 10px; }
+    .step strong { display: block; }
+    .step span { color: #4B5876; font-size: .95rem; }
+
+    /* ---------- 8. FAQ ---------- */
+    details { border-bottom: 1px solid var(--line); padding: 14px 0; }
+    details:first-of-type { margin-top: 20px; border-top: 1px solid var(--line); }
+    summary { font-weight: 500; cursor: pointer; list-style: none; display: flex; justify-content: space-between; gap: 12px; }
+    summary::after { content: "+"; font-weight: 700; color: var(--red); }
+    details[open] summary::after { content: "–"; }
+    details p { color: #4B5876; margin-top: 8px; }
+
+    /* ---------- 9. Final call to action ---------- */
+    .cta { background: var(--ink); color: #fff; text-align: center; }
+    .cta h2 { color: #fff; }
+    .cta ul { list-style: none; margin: 16px 0 26px; display: flex; flex-wrap: wrap; justify-content: center; gap: 6px 22px; }
+    .cta li::before { content: "✓ "; color: var(--marker); }
+    .cta .pen { color: var(--marker); font-size: 1.2rem; display: block; margin-top: 14px; }
+
+    footer { padding: 28px 0 40px; font-size: .85rem; color: #6B7690; }
+
+    /* ===== Theme A: old Siam tutoring school ===== */
+    body { font-family: "Sarabun", sans-serif; }
+    h1, h2, .sign-name { font-family: "Chonburi", serif; font-weight: 400; }
+    .sign { background: #B3261E; color: #fff; text-align: center; padding: 26px 16px 20px; border-bottom: 8px solid #FFD54A; }
+    .sign-name { font-size: clamp(2.4rem, 10vw, 4.4rem); line-height: 1.15; }
+    .sign-sub span { display: inline-block; border: 1.5px solid #FFD54A; color: #FFD54A; padding: 0 10px; margin: 6px 3px 0; font-weight: 500; }
+    .bar { background: #1E1E1E; color: #fff; position: sticky; top: 0; z-index: 10; }
+    .bar .wrap { display: flex; justify-content: space-between; align-items: center; height: 54px; }
+    .bar nav { display: flex; gap: 16px; font-size: .95rem; } .bar nav a { text-decoration: none; }
+    .bar .btn { padding: 6px 14px; border-radius: 0; }
+    /* Hero on a chalkboard, notebook pinned to it */
+    .hero { background: #22433A; color: #F3F1EA; }
+    .hero h1 { color: #FFD54A; font-size: clamp(1.9rem, 6.5vw, 3rem); }
+    .hero .lead { color: #D8E2DC; }
+    .hero .btn-plain { background: transparent; color: #fff; border-color: #fff; }
+    .btn { border-radius: 0; }
+    .tutor { background: #fff; color: #1C2B4B; border: 0; }
+    .notebook { transform: rotate(-2deg); }
+    .notebook::after { content: ""; position: absolute; top: -10px; left: 50%; width: 18px; height: 18px; border-radius: 50%; background: #B3261E; box-shadow: 0 2px 0 rgba(0,0,0,.3); }  /* pin */
+    .try { background: #DCEAE2; }
+    .result { border-left-color: #B3261E; background: #fff; }
+    .course:first-of-type { border-top-color: #B3261E; }
+    .cta { background: #B3261E; }
+    .cta .pen, .cta li::before { color: #FFD54A; }
+
+  </style>
+</head>
+<body>
+
+  <header class="sign">
+    <div class="sign-name">พี่ภูมิ ติวเตอร์</div>
+    <div class="sign-sub"><span>คณิต</span><span>ฟิสิกส์</span><span>A-Level</span><span>สยามสแควร์ ซอย ๗</span></div>
+  </header>
+  <div class="bar"><div class="wrap"><nav><a href="#try">ลองทำโจทย์</a><a href="#courses">คอร์ส</a><a href="#faq">คำถาม</a></nav><a class="btn btn-line" href="https://line.me/R/ti/p/%40example">แอดไลน์</a></div></div>
+
+  <!-- HERO -->
+  <section class="hero">
+    <div class="wrap">
+      <div>
+        <h1>คณิตกับฟิสิกส์ <span class="nb">ที่เข้าใจจริง</span> <span class="nb">ไม่ใช่จำสูตร</span></h1>
+        <p class="lead">ติว A-Level คณิตศาสตร์ 1 และฟิสิกส์ ตัวต่อตัวหรือกลุ่มเล็ก ที่สยามสแควร์ หรือออนไลน์ เริ่มจากจุดที่น้องยังไม่เข้าใจ ไม่ใช่จากหน้าแรกของหนังสือ</p>
+        <div class="btns">
+          <a class="btn btn-line" href="https://line.me/R/ti/p/%40example">ทดลองเรียนฟรี 30 นาที</a>
+          <a class="btn btn-plain" href="#try">ลองทำโจทย์ 1 ข้อ</a>
+        </div>
+
+        <!-- Real tutor: replace the initial with their photo. A real face is the biggest trust factor. -->
+        <div class="tutor">
+          <div class="avatar" aria-hidden="true">ภ</div>
+          <div>
+            <strong>พี่ภูมิ (ภูมิพัฒน์)</strong>
+            <small>วิศวฯ จุฬาฯ สอนมา 6 ปี <span class="nb">นักเรียนกว่า 140 คน</span></small>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tutor's notebook: handwritten notes, the way it looks in a real lesson -->
+      <div class="notebook" aria-label="ตัวอย่างโน้ตของพี่ภูมิ">
+        <div class="hw">กราฟ y = x² − 2x − 8</div>
+        <svg viewBox="0 0 260 150" aria-hidden="true">
+          <line x1="10" y1="100" x2="250" y2="100" stroke="#3E3E3E" stroke-width="1.5"/>
+          <line x1="110" y1="8" x2="110" y2="145" stroke="#3E3E3E" stroke-width="1.5"/>
+          <path d="M30 20 Q126 230 222 20" fill="none" stroke="#1C2B4B" stroke-width="2.5"/>
+          <circle cx="78" cy="100" r="5" fill="#D9473F"/><circle cx="174" cy="100" r="5" fill="#D9473F"/>
+          <text x="68" y="122" font-family="Sriracha" font-size="15" fill="#D9473F">−2</text>
+          <text x="170" y="122" font-family="Sriracha" font-size="15" fill="#D9473F">4</text>
+        </svg>
+        <div class="hw">ตัดแกน x ที่ (x − 4)(x + 2) = 0</div>
+        <div class="hw red">→ แต่ถ้ามี log อยู่ ห้ามลืมเช็กว่า x ใช้ได้จริง!</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- TRY A QUESTION -->
+  <section id="try" class="try">
+    <div class="wrap">
+      <h2>ลองทำโจทย์ 1 ข้อ</h2>
+      <p class="lead">แนวข้อสอบ A-Level คณิต 1 ข้อที่คนพลาดบ่อยที่สุดข้อหนึ่ง เลือกคำตอบแล้วดูวิธีคิดของพี่ภูมิ</p>
+
+      <div class="sheet">
+        <div class="sheet-head"><span>A-Level คณิตศาสตร์ 1</span><span>ข้อ 14</span></div>
+        <div class="sheet-body">
+          <p class="q">ถ้า log<sub>2</sub>x + log<sub>2</sub>(x − 2) = 3 แล้ว x มีค่าเท่าใด</p>
+
+          <div class="bubbles" id="bubbles">
+            <button class="bubble" data-ok="0" data-tip="ลองแทน x = 2 ดู log₂(0) ไม่มีค่า"><span class="o">1</span><span class="val">2</span></button>
+            <button class="bubble" data-ok="1"><span class="o">2</span><span class="val">4</span></button>
+            <button class="bubble" data-ok="0" data-tip="ลองแทนกลับ: log₂6 + log₂4 = log₂24 ไม่ใช่ 3"><span class="o">3</span><span class="val">6</span></button>
+            <button class="bubble" data-ok="0" data-tip="ลองแทนกลับ: log₂8 + log₂6 = log₂48 ไม่ใช่ 3"><span class="o">4</span><span class="val">8</span></button>
+            <button class="bubble" data-ok="0" data-tip="ใกล้แล้ว! −2 เป็นคำตอบของสมการกำลังสองจริง แต่ใส่ใน log ไม่ได้"><span class="o">5</span><span class="val">−2</span></button>
+          </div>
+
+          <div class="feedback" id="feedback" aria-live="polite"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- COURSES -->
+  <section id="courses" class="wrap">
+    <h2>คอร์สและราคา</h2>
+    <p class="lead">ราคาต่อชั่วโมง เลือกเวลาเรียนเองได้ ไม่ต้องจ่ายล่วงหน้าทั้งคอร์ส</p>
+
+    <div class="course"><h3>คณิต A-Level ตัวต่อตัว</h3><p>ปูพื้นหรือทำโจทย์ตามจุดอ่อน เหมาะกับ ม.5–ม.6</p><div class="price">650 <small>บาท / ชม.</small></div></div>
+    <div class="course"><h3>ฟิสิกส์ A-Level ตัวต่อตัว</h3><p>กลศาสตร์ ไฟฟ้า คลื่น เน้นเข้าใจภาพก่อนใช้สูตร</p><div class="price">650 <small>บาท / ชม.</small></div></div>
+    <div class="course"><h3>กลุ่มเล็ก 3–5 คน</h3><p>ชวนเพื่อนมาเรียนด้วยกัน เนื้อหาตามที่กลุ่มเลือก</p><div class="price">350 <small>บาท / ชม. / คน</small></div></div>
+    <div class="course"><h3>แพ็ก 10 ชั่วโมง</h3><p>ตัวต่อตัว ใช้ได้ทั้งคณิตและฟิสิกส์ ภายใน 3 เดือน</p><div class="price">5,900 <small>ประหยัด 600 บาท</small></div></div>
+  </section>
+
+  <!-- RESULTS -->
+  <section class="try">
+    <div class="wrap">
+      <h2>น้อง ๆ ที่เรียนกับพี่ภูมิ</h2>
+      <p class="lead">TCAS 2569</p>
+      <div class="results">
+        <div class="result"><div class="who">น้องมิ้นท์</div><div class="where">วิศวกรรมศาสตร์ จุฬาฯ</div><div class="score">คณิต 1 <b>82</b> ฟิสิกส์ <b>71</b></div></div>
+        <div class="result"><div class="who">น้องบีม</div><div class="where">แพทยศาสตร์ มหิดล</div><div class="score">คณิต 1 <b>88</b> ฟิสิกส์ <b>79</b></div></div>
+        <div class="result"><div class="who">น้องแพรว</div><div class="where">วิทยาศาสตร์ เกษตรศาสตร์</div><div class="score">คณิต 1 <b>74</b></div></div>
+        <div class="result"><div class="who">น้องต้นกล้า</div><div class="where">วิศวกรรมการบิน สจล.</div><div class="score">คณิต 1 <b>79</b> ฟิสิกส์ <b>68</b></div></div>
+        <div class="result"><div class="who">น้องปลาย</div><div class="where">สถาปัตยกรรม จุฬาฯ</div><div class="score">คณิต 1 <b>70</b></div></div>
+        <div class="result"><div class="who">น้องเจได</div><div class="where">วิศวกรรมคอมพิวเตอร์ ธรรมศาสตร์</div><div class="score">คณิต 1 <b>76</b> ฟิสิกส์ <b>65</b></div></div>
+      </div>
+      <p class="note-small">ตัวอย่างในเว็บสาธิต ชื่อและคะแนนสมมติ</p>
+    </div>
+  </section>
+
+  <!-- WHERE -->
+  <section class="wrap where">
+    <div class="photo"><img src="img/siam.jpg" alt="ซอยในสยามสแควร์" loading="lazy" width="900" height="900"></div>
+    <div>
+      <h2>เรียนที่ไหนได้บ้าง</h2>
+      <div class="place"><strong>สยามสแควร์</strong><span>ห้องติวในซอย 7 เดินจาก BTS สยาม ทางออก 2 ประมาณ 5 นาที</span></div>
+      <div class="place"><strong>ออนไลน์</strong><span>ผ่าน Zoom ใช้ iPad เขียนให้ดูสด ๆ ได้คลิปย้อนหลังทุกครั้ง</span></div>
+      <div class="place"><strong>ที่บ้านน้อง</strong><span>เขตปทุมวัน ราชเทวี บางรัก บวกค่าเดินทาง 150 บาท</span></div>
+    </div>
+  </section>
+
+  <!-- STEPS -->
+  <section class="try">
+    <div class="wrap">
+      <h2>เริ่มเรียนยังไง</h2>
+      <div class="steps">
+        <div class="step"><strong>แอดไลน์ บอกระดับชั้นกับเป้าหมาย</strong><span>เช่น ม.5 อยากได้คณิต 1 เกิน 75</span></div>
+        <div class="step"><strong>ทดลองเรียนฟรี 30 นาที</strong><span>พี่ภูมิดูว่าน้องติดตรงไหน แล้ววางแผนให้</span></div>
+        <div class="step"><strong>เลือกเวลาเรียนประจำ</strong><span>จ่ายเป็นครั้งหรือเป็นแพ็ก ผ่าน PromptPay</span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FAQ -->
+  <section id="faq" class="wrap">
+    <h2>คำถามที่พบบ่อย</h2>
+    <details><summary>พื้นฐานไม่ดีเลย เรียนทันไหม</summary><p>ทัน ครั้งแรกพี่จะดูว่าน้องติดตรงไหนก่อน แล้วเริ่มจากตรงนั้น ส่วนใหญ่ปูพื้นใหม่ใช้ 6–10 ชั่วโมง</p></details>
+    <details><summary>เลื่อนเวลาเรียนได้ไหม</summary><p>ได้ แจ้งทางไลน์ล่วงหน้าอย่างน้อย 12 ชั่วโมง ไม่เสียชั่วโมงเรียน</p></details>
+    <details><summary>ผู้ปกครองดูความคืบหน้าได้ยังไง</summary><p>หลังเรียนทุกครั้ง พี่จะสรุปสั้น ๆ ทางไลน์ ว่าเรียนอะไรไป และน้องควรฝึกอะไรต่อ</p></details>
+    <details><summary>มีเอกสารให้ไหม</summary><p>มีชีทสรุปและแบบฝึกหัดทุกบท เป็นไฟล์ PDF ส่งให้ทางไลน์</p></details>
+  </section>
+
+  <!-- CTA -->
+  <section class="cta">
+    <div class="wrap">
+      <h2>ลองเรียนก่อน แล้วค่อยตัดสินใจ</h2>
+      <ul><li>ทดลองเรียนฟรี 30 นาที</li><li>ไม่ต้องจ่ายล่วงหน้า</li><li>เลือกเวลาเองได้</li></ul>
+      <a class="btn btn-line" href="https://line.me/R/ti/p/%40example">แอดไลน์ นัดทดลองเรียน</a>
+      <span class="pen">ตอบไลน์ทุกวัน ภายใน 2 ชั่วโมง</span>
+    </div>
+  </section>
+
+  <footer>
+    <div class="wrap">
+      พี่ภูมิ ติวคณิต-ฟิสิกส์ สยามสแควร์ กรุงเทพฯ<br>
+      เว็บตัวอย่าง ติวเตอร์ ชื่อ ผลสอบ และรีวิวเป็นข้อมูลสมมติ / Demo site, tutor and results are fictional.
+      Photo: Tree Lightbulb, Wikimedia Commons (CC BY-SA 4.0), cropped.
+    </div>
+  </footer>
+
+  <script>
+    /* ---------- The practice question ----------
+       Each bubble has data-ok="1" (right) or "0" (wrong) and a hint in data-tip.
+       Clicking fills the bubble like a 2B pencil, then shows the red-pen feedback. */
+    const bubbles = document.querySelectorAll(".bubble");
+    const feedback = document.getElementById("feedback");
+
+    const SOLUTION = `
+      <div class="pen">ถูกต้อง! x = 4 ✓</div>
+      <ol>
+        <li>รวม log: log₂[x(x − 2)] = 3</li>
+        <li>เปลี่ยนเป็นเลขยกกำลัง: x² − 2x = 2³ = 8</li>
+        <li>แยกตัวประกอบ: (x − 4)(x + 2) = 0 ได้ x = 4 หรือ −2</li>
+        <li>เช็กเงื่อนไข: ใน log ต้องเป็นบวก แปลว่า x > 2 เหลือแค่ <b>x = 4</b></li>
+      </ol>
+      <div class="pen" style="font-size:1.05rem;margin-top:8px">คนพลาดตอบ −2 เยอะมาก เพราะลืมขั้นที่ 4</div>`;
+
+    bubbles.forEach(b => b.addEventListener("click", () => {
+      bubbles.forEach(x => x.classList.remove("picked", "right"));
+      b.classList.add("picked");
+
+      if (b.dataset.ok === "1") {
+        b.classList.add("right");
+        feedback.innerHTML = SOLUTION;
+      } else {
+        feedback.innerHTML = `<div class="pen">ยังไม่ใช่ ลองใหม่อีกที</div><p>${b.dataset.tip}</p>`;
+      }
+      feedback.classList.add("show");
+    }));
+  </script>
+</body>
+</html>

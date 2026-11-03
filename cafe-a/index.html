@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>กาแฟเหมือนเดิม | โอเลี้ยงถุงผ้า ซอยเกษมสันต์</title>
+
+  <!-- LINE / Facebook link preview. On the real site, og:image must be a full https:// address. -->
+  <meta name="description" content="ร้านกาแฟเล็ก ๆ ซอยเกษมสันต์ ใกล้ BTS สนามกีฬาฯ โอเลี้ยงถุงผ้าสูตรเดิมตั้งแต่ 2557 สั่งล่วงหน้าทาง LINE">
+  <meta property="og:title" content="กาแฟเหมือนเดิม ซอยเกษมสันต์">
+  <meta property="og:description" content="โอเลี้ยงถุงผ้าสูตรเดิม ตั้งแต่ 2557 สั่งล่วงหน้าทาง LINE">
+  <meta property="og:image" content="img/share.jpg">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48'%3E%3Ccircle cx='24' cy='24' r='24' fill='%23B3261E'/%3E%3Cpath d='M13 15C13 25 17 33 21 37C25 33 29 25 29 15Z' fill='white'/%3E%3C/svg%3E">
+
+  <!-- Chonburi: Thai display font that looks like hand-painted shop signs.
+       Sarabun: plain, old-school Thai body text. -->
+  <link href="https://fonts.googleapis.com/css2?family=Chonburi&family=Sarabun:wght@400;600&display=swap" rel="stylesheet">
+
+  <style>
+    /* ---------- Colors from old Thai coffee shops ---------- */
+    :root {
+      --mint:  #DCEAE2;   /* painted shop wall */
+      --red:   #B3261E;   /* enamel signboard */
+      --green: #1F4B3F;   /* bottle green trim */
+      --ink:   #1C1C1C;
+      --paper: #FFFFFF;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: "Sarabun", sans-serif; background: var(--mint); color: var(--ink); line-height: 1.7; font-size: 17px; }
+    img { display: block; width: 100%; height: 100%; object-fit: cover; }
+    a { color: inherit; }
+    .wrap { max-width: 1000px; margin: 0 auto; padding-inline: 20px; }
+    .nb { white-space: nowrap; }     /* keeps a Thai word from breaking in the middle */
+    h1, h2, .sign-name { font-family: "Chonburi", serif; font-weight: 400; line-height: 1.35; }
+
+    /* ---------- 1. The signboard (the signature of this style) ---------- */
+    .sign {
+      background: var(--red); color: var(--paper);
+      border-bottom: 8px solid var(--green);
+      text-align: center; padding: 28px 16px 22px;
+    }
+    .sign-top { display: flex; justify-content: center; align-items: center; gap: 14px; }
+    .sign svg { width: 52px; height: 52px; flex: none; }
+    .sign-name { font-size: clamp(2.6rem, 11vw, 5rem); line-height: 1.1; }
+    .sign-sub { margin-top: 8px; font-size: 1rem; letter-spacing: .02em; }
+    .sign-sub span { display: inline-block; border: 1.5px solid currentColor; padding: 0 10px; margin: 4px 3px; }
+
+    .bar { background: var(--green); color: var(--paper); }
+    .bar .wrap { display: flex; justify-content: space-between; align-items: center; height: 52px; font-size: .95rem; }
+    .bar nav { display: flex; gap: 18px; }
+    .bar a { text-decoration: none; }
+    .bar .line { background: #06C755; padding: 6px 14px; font-weight: 600; }
+
+    /* ---------- 2. Hero photo with a white photo-print border ---------- */
+    .hero { padding: 40px 0 16px; }
+    .print { background: var(--paper); padding: 10px 10px 14px; box-shadow: 0 2px 0 rgba(0,0,0,.08); }
+    .print .img { aspect-ratio: 16 / 10; }
+    .print figcaption { font-size: .85rem; color: #666; padding-top: 8px; }
+    .hero h1 { font-size: clamp(1.9rem, 6vw, 2.8rem); color: var(--green); margin-top: 28px; }
+    .hero p { max-width: 34em; margin-top: 6px; }
+
+    /* ---------- 3. Wall menu board ---------- */
+    .board { margin: 48px 0; background: var(--green); color: var(--paper); padding: 32px 24px 36px; }
+    .board h2 { font-size: 1.9rem; text-align: center; }
+    .board .note { text-align: center; opacity: .8; font-size: .95rem; margin-bottom: 24px; }
+    .board-grid { display: grid; gap: 0 40px; }
+    @media (min-width: 760px) { .board-grid { grid-template-columns: 1fr 1fr; } }
+    .item { display: flex; align-items: baseline; gap: 10px; padding: 9px 0; border-bottom: 1px dashed rgba(255,255,255,.3); }
+    .item .name { font-weight: 600; font-size: 1.08rem; }
+    .item .en { display: block; font-weight: 400; font-size: .82rem; opacity: .7; }
+    .item .price { margin-left: auto; font-family: "Chonburi", serif; font-size: 1.3rem; color: #FFD9A8; }
+    .hot { background: var(--red); font-size: .72rem; font-weight: 600; padding: 1px 7px; margin-left: 8px; vertical-align: 2px; }
+
+    /* Photos of the drinks, pinned under the board like snapshots */
+    .snaps { display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px; margin-top: 28px; }
+    @media (min-width: 760px) { .snaps { grid-template-columns: repeat(4, 1fr); } }
+    .snaps .print .img { aspect-ratio: 4 / 5; }
+    .snaps .print:nth-child(odd)  { transform: rotate(-1.2deg); }
+    .snaps .print:nth-child(even) { transform: rotate(1deg); }
+    .snaps figcaption { color: var(--ink); font-weight: 600; }
+
+    /* ---------- 4. Story ---------- */
+    .story { display: grid; gap: 28px; align-items: center; padding: 24px 0 56px; }
+    @media (min-width: 760px) { .story { grid-template-columns: 1fr 1fr; } }
+    .story h2 { color: var(--red); font-size: 1.8rem; margin-bottom: 10px; }
+    .story p + p { margin-top: 10px; }
+    .story .print .img { aspect-ratio: 4 / 3; }
+
+    /* ---------- 5. Visit ---------- */
+    .visit { background: var(--paper); padding: 32px 24px; margin-bottom: 56px; border-top: 6px solid var(--red); }
+    .visit h2 { color: var(--green); font-size: 1.7rem; margin-bottom: 6px; }
+    .visit-grid { display: grid; gap: 28px; }
+    @media (min-width: 760px) { .visit-grid { grid-template-columns: 1fr 1fr; } }
+    .hours-row { display: flex; justify-content: space-between; padding: 7px 0; border-bottom: 1px solid #eee; }
+    .hours-row.today { color: var(--red); font-weight: 600; }
+    .btns { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; }
+    .btn { text-decoration: none; padding: 9px 16px; border: 1.5px solid var(--green); color: var(--green); font-weight: 600; }
+    .btn.line { background: #06C755; border-color: #06C755; color: #fff; }
+
+    footer { background: var(--red); color: var(--paper); text-align: center; padding: 32px 16px; font-size: .9rem; }
+    footer .credits { opacity: .7; font-size: .75rem; margin-top: 10px; }
+
+    a:focus-visible { outline: 3px solid var(--ink); outline-offset: 2px; }
+  </style>
+</head>
+<body>
+
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+    <symbol id="mark" viewBox="0 0 48 48">
+      <circle cx="24" cy="24" r="22.5" fill="none" stroke="currentColor" stroke-width="2"/>
+      <ellipse cx="21" cy="15" rx="8" ry="2.6" fill="none" stroke="currentColor" stroke-width="2"/>
+      <path d="M13 15 C13 25 17 33 21 37 C25 33 29 25 29 15" fill="currentColor"/>
+      <path d="M29 15 L38 10" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/>
+    </symbol>
+  </svg>
+
+  <!-- SIGNBOARD -->
+  <header class="sign">
+    <div class="sign-top">
+      <svg><use href="#mark"/></svg>
+      <div class="sign-name">เหมือนเดิม</div>
+    </div>
+    <div class="sign-sub"><span>โอเลี้ยงถุงผ้า</span><span>กาแฟสด</span><span>ตั้งแต่ ๒๕๕๗</span></div>
+  </header>
+
+  <div class="bar">
+    <div class="wrap">
+      <nav><a href="#menu">เมนู</a><a href="#story">ร้านเรา</a><a href="#visit">ที่ตั้ง</a></nav>
+      <a class="line" href="https://line.me/R/ti/p/%40example">แอดไลน์</a>
+    </div>
+  </div>
+
+  <main class="wrap">
+
+    <section class="hero">
+      <figure class="print">
+        <div class="img"><img src="img/hero.jpg" alt="หน้าเคาน์เตอร์ร้าน กำลังชงกาแฟ" width="1200" height="675"></div>
+        <figcaption>หน้าเคาน์เตอร์ ทุกเช้า 7 โมง</figcaption>
+      </figure>
+      <h1>กาแฟแก้วเดิม <span class="nb">ทุกเช้า</span></h1>
+      <p>ชงโอเลี้ยงด้วยถุงผ้าแบบที่ร้านกาแฟโบราณทำมา คู่กับ<span class="nb">เอสเพรสโซ่</span>สำหรับคนที่อยากได้ลาเต้ เดินจาก BTS สนามกีฬาฯ 3 นาที</p>
+    </section>
+
+    <!-- MENU BOARD -->
+    <section id="menu" class="board">
+      <h2>เมนูประจำร้าน</h2>
+      <p class="note">แก้ว 16 ออนซ์ หวานน้อยบอกได้</p>
+      <div class="board-grid">
+        <div>
+          <div class="item"><span class="name">โอเลี้ยง<span class="hot">ขายดี</span><span class="en">Oliang</span></span><span class="price">45</span></div>
+          <div class="item"><span class="name">กาแฟเย็นแก้วโหล<span class="en">Thai iced coffee</span></span><span class="price">55</span></div>
+          <div class="item"><span class="name">ชาไทย<span class="en">Thai tea</span></span><span class="price">50</span></div>
+          <div class="item"><span class="name">ชามะนาว<span class="en">Lime tea</span></span><span class="price">45</span></div>
+        </div>
+        <div>
+          <div class="item"><span class="name">อเมริกาโน่<span class="en">Americano</span></span><span class="price">55</span></div>
+          <div class="item"><span class="name">ลาเต้ร้อน<span class="en">Hot latte</span></span><span class="price">60</span></div>
+          <div class="item"><span class="name">ลาเต้เย็น<span class="hot">ขายดี</span><span class="en">Iced latte</span></span><span class="price">65</span></div>
+          <div class="item"><span class="name">โกโก้เย็น<span class="en">Iced cocoa</span></span><span class="price">55</span></div>
+        </div>
+      </div>
+    </section>
+
+    <div class="snaps">
+      <figure class="print"><div class="img"><img src="img/oliang.jpg" alt="โอเลี้ยง" loading="lazy"></div><figcaption>โอเลี้ยง</figcaption></figure>
+      <figure class="print"><div class="img"><img src="img/iced-jar.jpg" alt="กาแฟเย็นแก้วโหล" loading="lazy"></div><figcaption>กาแฟเย็นแก้วโหล</figcaption></figure>
+      <figure class="print"><div class="img"><img src="img/iced-latte.jpg" alt="ลาเต้เย็น" loading="lazy"></div><figcaption>ลาเต้เย็น</figcaption></figure>
+      <figure class="print"><div class="img"><img src="img/latte.jpg" alt="ลาเต้ร้อน" loading="lazy"></div><figcaption>ลาเต้ร้อน</figcaption></figure>
+    </div>
+
+    <!-- STORY -->
+    <section id="story" class="story" style="margin-top:56px">
+      <figure class="print"><div class="img"><img src="img/barista.jpg" alt="กดผงกาแฟลงด้ามชง" loading="lazy"></div></figure>
+      <div>
+        <h2>เริ่มจากรถเข็นหน้าซอย</h2>
+        <p>ปี 2557 พี่ต้อมขายโอเลี้ยงจากรถเข็นหน้าซอยเกษมสันต์ ลูกค้าเป็นคนทำงานแถวสยามที่แวะ<span class="nb">ทุกเช้า</span></p>
+        <p>วันนี้มีหน้าร้านแล้ว แต่ยังชงด้วยถุงผ้าแบบเดิม หลายคนสั่ง<span class="nb">แก้วเดิม</span>ทุกวัน ชื่อร้านก็มาจากตรงนั้น</p>
+      </div>
+    </section>
+
+    <!-- VISIT -->
+    <section id="visit" class="visit">
+      <div class="visit-grid">
+        <div>
+          <h2>มาที่ร้าน</h2>
+          <p>ซอยเกษมสันต์ 2 เดิน 3 นาทีจาก <span class="nb">BTS สนามกีฬาแห่งชาติ</span> ทางออก 1</p>
+          <div class="btns">
+            <a class="btn line" href="https://line.me/R/ti/p/%40example">แอดไลน์ สั่งล่วงหน้า</a>
+            <a class="btn" href="https://maps.google.com/?q=Soi+Kasemsan+2+Bangkok">แผนที่</a>
+            <a class="btn" href="https://lineman.line.me/">LINE MAN</a>
+            <a class="btn" href="https://food.grab.com/th/">Grab</a>
+          </div>
+        </div>
+        <div id="hours"></div>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    เหมือนเดิม ซอยเกษมสันต์ 2 ปทุมวัน กรุงเทพฯ
+    <div class="credits">เว็บตัวอย่าง ร้านนี้ไม่มีอยู่จริง / Demo site. Photos via Wikimedia Commons, color-adjusted: Shixart1985 (CC BY 2.0), Kim Sanso (CC0), T.Tseng (CC BY 2.0), Chainwit. (CC BY-SA 4.0), Vyacheslav Argenberg (CC BY 4.0).</div>
+  </footer>
+
+  <script src="hours.js"></script>
+</body>
+</html>

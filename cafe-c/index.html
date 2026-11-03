@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>กาแฟเหมือนเดิม | โอเลี้ยงถุงผ้า ซอยเกษมสันต์</title>
+  <meta name="description" content="ร้านกาแฟเล็ก ๆ ซอยเกษมสันต์ ใกล้ BTS สนามกีฬาฯ โอเลี้ยงถุงผ้าสูตรเดิม สั่งล่วงหน้าทาง LINE">
+  <meta property="og:title" content="กาแฟเหมือนเดิม ซอยเกษมสันต์">
+  <meta property="og:description" content="โอเลี้ยงถุงผ้าสูตรเดิม สั่งล่วงหน้าทาง LINE">
+  <meta property="og:image" content="img/share.jpg">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48'%3E%3Ccircle cx='24' cy='24' r='24' fill='%2324392D'/%3E%3Cpath d='M13 15C13 25 17 33 21 37C25 33 29 25 29 15Z' fill='white'/%3E%3C/svg%3E">
+
+  <!-- Pridi: a sturdy slab-style Thai serif, for headings only (like Tim Wendelboe's slab headings).
+       Anuphan: plain modern Thai, for everything else. -->
+  <link href="https://fonts.googleapis.com/css2?family=Anuphan:wght@400;500&family=Pridi:wght@500;600&display=swap" rel="stylesheet">
+
+  <style>
+    /* ---------- 1. Brand ----------
+       Real client: pull these from their logo, cups or sign. */
+    :root {
+      --brand: #24392D;      /* deep green, used only in the footer, the about block and the strip */
+      --text:  #222;
+      --muted: #707070;
+      --line:  #E6E6E6;
+      --tint:  #F4F2EE;      /* neutral backdrop behind product photos */
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: "Anuphan", sans-serif; color: var(--text); background: #fff; line-height: 1.7; font-size: 16px; }
+    img { display: block; width: 100%; height: 100%; object-fit: cover; }
+    a { color: inherit; }
+    .nb { white-space: nowrap; }   /* keeps a Thai word from breaking in the middle */
+    h1, h2 { text-wrap: balance; }
+    h1, h2 { font-family: "Pridi", serif; font-weight: 600; line-height: 1.3; }
+
+    .container { max-width: 1120px; margin: 0 auto; padding-inline: 24px; }
+
+    /* ---------- 2. Strip + header ---------- */
+    .strip { background: var(--brand); color: #fff; text-align: center; font-size: .82rem; padding: 6px 12px; }
+
+    header { background: #fff; border-bottom: 1px solid var(--line); position: sticky; top: 0; z-index: 10; }
+    .nav { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; height: 68px; }
+    .links { display: none; gap: 26px; font-size: .92rem; }
+    .links a { text-decoration: none; }
+    .links a:hover { text-decoration: underline; text-underline-offset: 4px; }
+    .logo { grid-column: 2; display: flex; align-items: center; gap: 10px; text-decoration: none; color: var(--brand); }
+    .logo svg { width: 34px; height: 34px; }
+    .logo span { font-family: "Pridi", serif; font-weight: 600; font-size: 1.25rem; }
+    .nav-right { justify-self: end; }
+    @media (min-width: 800px) { .links { display: flex; } }
+
+    /* Square buttons with a thin outline (SEY / Wendelboe style) */
+    .btn {
+      display: inline-block; text-decoration: none; font-size: .92rem;
+      padding: 10px 20px; border: 1px solid currentColor; background: none;
+    }
+    .btn-fill { background: var(--text); color: #fff; border-color: var(--text); }
+    .btn-line { background: #06C755; color: #fff; border-color: #06C755; }
+    .btn-light { background: #fff; color: var(--text); border-color: #fff; }
+
+    /* ---------- 3. Hero: photo, text sits bottom-left ---------- */
+    .hero { position: relative; height: min(82vh, 680px); color: #fff; }
+    .hero::after { content: ""; position: absolute; inset: 0;
+      background: linear-gradient(to top, rgba(0,0,0,.55), rgba(0,0,0,0) 60%); }  /* only darkens where the text is */
+    .hero-text { position: absolute; left: 0; right: 0; bottom: 48px; z-index: 1; }
+    .hero h1 { font-size: clamp(2.3rem, 7vw, 3.8rem); max-width: 12em; }
+    .hero p { margin: 8px 0 22px; max-width: 28em; font-size: 1.05rem; }
+
+    /* ---------- 4. Menu ---------- */
+    .menu { padding-block: 88px 72px; }
+    .head-row { display: flex; justify-content: space-between; align-items: baseline; gap: 16px; margin-bottom: 32px; }
+    .head-row h2 { font-size: 1.9rem; }
+    .head-row p { color: var(--muted); font-size: .92rem; }
+
+    .grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 32px 16px; }
+    @media (min-width: 800px) { .grid { grid-template-columns: repeat(4, 1fr); gap: 40px 24px; } }
+    /* The best seller gets the big spot on the left; the rest stack beside it as a list */
+    .product.feature { grid-column: 1 / -1; }
+    .product.feature .photo { aspect-ratio: 16 / 10; }
+    .product.feature h3 { font-family: "Pridi", serif; font-size: 1.5rem; font-weight: 600; }
+    @media (min-width: 800px) {
+      .grid { grid-template-columns: 1.4fr 1fr; gap: 0 40px; }
+      .product.feature { grid-column: 1; grid-row: 1 / span 3; }
+      .product.feature .photo { aspect-ratio: 4 / 4.4; }
+      .product:not(.feature) {
+        display: grid; grid-template-columns: 150px 1fr; column-gap: 20px; align-content: center;
+        padding: 18px 0; border-bottom: 1px solid var(--line);
+      }
+      .product:not(.feature) .photo { grid-row: 1 / span 3; }
+      .product:not(.feature) h3 { margin-top: 0; align-self: end; font-size: 1.1rem; }
+    }
+    .product .photo { aspect-ratio: 4 / 5; background: var(--tint); overflow: hidden; }
+    .product h3 { font-weight: 500; font-size: 1rem; margin-top: 14px; }
+    .product .en, .product .price { font-size: .88rem; color: var(--muted); }
+    .product .price { color: var(--text); margin-top: 2px; }
+
+    .more { margin-top: 64px; display: grid; gap: 0 48px; }
+    @media (min-width: 800px) { .more { grid-template-columns: 1fr 1fr; } }
+    .more-row { display: flex; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid var(--line); font-size: .95rem; }
+    .more-row .en { color: var(--muted); }
+
+    /* ---------- 5. About: photo + brand-color panel ---------- */
+    .about { display: grid; background: var(--brand); color: #fff; }
+    @media (min-width: 800px) { .about { grid-template-columns: 1.1fr 1fr; } }
+    .about .photo { aspect-ratio: 4 / 3; }
+    .about-text { padding: 56px 28px; align-self: center; max-width: 32em; }
+    .about-text h2 { font-size: 1.8rem; margin-bottom: 16px; }
+    .about-text p + p { margin-top: 12px; }
+
+    /* ---------- 6. Visit ---------- */
+    .visit { padding-block: 88px; display: grid; gap: 48px; }
+    @media (min-width: 800px) { .visit { grid-template-columns: 1fr 1fr; } }
+    .visit h2 { font-size: 1.9rem; margin-bottom: 12px; }
+    .actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 22px; }
+    .hours-row { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid var(--line); }
+    .hours-row.today { font-weight: 500; }
+    
+    /* ---------- 7. Footer in brand color, logo centered (Fuglen style) ---------- */
+    footer { background: var(--brand); color: #fff; padding: 64px 0 40px; text-align: center; }
+    footer svg { width: 56px; height: 56px; margin: 0 auto 10px; display: block; }
+    .foot-name { font-family: "Pridi", serif; font-size: 1.4rem; }
+    .foot-links { display: flex; justify-content: center; flex-wrap: wrap; gap: 8px 24px; margin: 24px 0; font-size: .92rem; }
+    .foot-links a { text-decoration: none; opacity: .85; }
+    .foot-links a:hover { opacity: 1; text-decoration: underline; }
+    .credits { font-size: .75rem; opacity: .6; max-width: 46em; margin: 32px auto 0; line-height: 1.7; }
+
+    a:focus-visible { outline: 2px solid #06C755; outline-offset: 3px; }
+  </style>
+</head>
+<body>
+
+  <!-- The logo, defined once and reused in header + footer.
+       A Thai cloth coffee filter: ring, cloth bag, handle. -->
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+    <symbol id="mark" viewBox="0 0 48 48">
+      <circle cx="24" cy="24" r="22.5" fill="none" stroke="currentColor" stroke-width="2"/>
+      <ellipse cx="21" cy="15" rx="8" ry="2.6" fill="none" stroke="currentColor" stroke-width="2"/>
+      <path d="M13 15 C13 25 17 33 21 37 C25 33 29 25 29 15" fill="currentColor"/>
+      <path d="M29 15 L38 10" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/>
+    </symbol>
+  </svg>
+
+  <div class="strip">สั่งกลับบ้านผ่าน LINE MAN และ Grab ได้แล้ว</div>
+
+  <header>
+    <div class="container nav">
+      <nav class="links">
+        <a href="#menu">เมนู</a>
+        <a href="#about">เกี่ยวกับร้าน</a>
+        <a href="#visit">เวลาเปิด-ที่ตั้ง</a>
+      </nav>
+      <a class="logo" href="#" aria-label="กาแฟเหมือนเดิม หน้าแรก">
+        <svg><use href="#mark"/></svg><span>เหมือนเดิม</span>
+      </a>
+      <div class="nav-right"><a class="btn btn-line" href="https://line.me/R/ti/p/%40example">แอดไลน์</a></div>
+    </div>
+  </header>
+
+  <!-- HERO -->
+  <div class="hero">
+    <img src="img/hero.jpg" alt="บาริสต้ากำลังชงเอสเพรสโซ่ที่เคาน์เตอร์">
+    <div class="container hero-text">
+      <h1>กาแฟแก้วเดิม ทุกเช้า</h1>
+      <p>ร้านเล็ก ๆ ในซอยเกษมสันต์ ชงโอเลี้ยงด้วยถุงผ้าแบบเดิม คู่กับ<span class="nb">เอสเพรสโซ่</span></p>
+      <a class="btn btn-light" href="#menu">ดูเมนู</a>
+    </div>
+  </div>
+
+  <!-- MENU -->
+  <section id="menu" class="container menu">
+    <div class="head-row">
+      <h2>เมนูประจำ</h2>
+      <p>แก้ว 16 ออนซ์</p>
+    </div>
+
+    <div class="grid">
+      <div class="product feature">
+        <div class="photo"><img loading="lazy" src="img/oliang.jpg" alt="โอเลี้ยง"></div>
+        <h3>โอเลี้ยง</h3><div class="en">Oliang, ชงด้วยถุงผ้า เมนูแรกของร้าน</div><div class="price">45 บาท</div>
+      </div>
+      <div class="product">
+        <div class="photo"><img loading="lazy" src="img/iced-jar.jpg" alt="กาแฟเย็นในแก้วโหล"></div>
+        <h3>กาแฟเย็นแก้วโหล</h3><div class="en">Thai iced coffee</div><div class="price">55 บาท</div>
+      </div>
+      <div class="product">
+        <div class="photo"><img loading="lazy" src="img/iced-latte.jpg" alt="ลาเต้เย็น"></div>
+        <h3>ลาเต้เย็น</h3><div class="en">Iced latte</div><div class="price">65 บาท</div>
+      </div>
+      <div class="product">
+        <div class="photo"><img loading="lazy" src="img/latte.jpg" alt="ลาเต้ร้อน"></div>
+        <h3>ลาเต้ร้อน</h3><div class="en">Hot latte</div><div class="price">60 บาท</div>
+      </div>
+    </div>
+
+    <div class="more">
+      <div>
+        <div class="more-row"><span>อเมริกาโน่ <span class="en">Americano</span></span><span>55</span></div>
+        <div class="more-row"><span>ชาไทย <span class="en">Thai tea</span></span><span>50</span></div>
+      </div>
+      <div>
+        <div class="more-row"><span>ชามะนาว <span class="en">Lime tea</span></span><span>45</span></div>
+        <div class="more-row"><span>โกโก้เย็น <span class="en">Iced cocoa</span></span><span>55</span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ABOUT -->
+  <section id="about" class="about">
+    <div class="photo"><img loading="lazy" src="img/barista.jpg" alt="กดผงกาแฟลงด้ามชง"></div>
+    <div class="about-text">
+      <h2>เริ่มจากรถเข็นหน้าซอย</h2>
+      <p>ปี 2014 เราขายโอเลี้ยงจากรถเข็นหน้าซอยเกษมสันต์ ตอนนี้มีหน้าร้านแล้ว แต่ยังชงด้วยถุงผ้าแบบเดิม คั่วเมล็ดเองทุกสัปดาห์</p>
+      <p>ลูกค้าส่วนใหญ่คือคนทำงานแถวสยามกับนักศึกษา หลายคนสั่งแก้วเดิมทุกวัน ชื่อร้านก็มาจากตรงนั้น</p>
+    </div>
+  </section>
+
+  <!-- VISIT -->
+  <section id="visit" class="container visit">
+    <div>
+      <h2>เวลาเปิด-ที่ตั้ง</h2>
+      <p>ซอยเกษมสันต์ 2 เดิน 3 นาทีจาก <span class="nb">BTS สนามกีฬาแห่งชาติ</span> ทางออก 1</p>
+      <div class="actions">
+        <a class="btn btn-line" href="https://line.me/R/ti/p/%40example">แอดไลน์ สั่งล่วงหน้า</a>
+        <a class="btn" href="https://maps.google.com/?q=Soi+Kasemsan+2+Bangkok">เปิดแผนที่</a>
+      </div>
+      <div class="actions">
+        <a class="btn" href="https://lineman.line.me/">LINE MAN</a>
+        <a class="btn" href="https://food.grab.com/th/">Grab</a>
+      </div>
+    </div>
+    <div id="hours"></div>
+  </section>
+
+  <footer>
+    <svg><use href="#mark"/></svg>
+    <div class="foot-name">เหมือนเดิม</div>
+    <div style="opacity:.75;font-size:.9rem">ซอยเกษมสันต์ 2 ปทุมวัน กรุงเทพฯ 10330</div>
+    <nav class="foot-links">
+      <a href="#menu">เมนู</a><a href="#visit">เวลาเปิด</a>
+      <a href="https://facebook.com/">Facebook</a><a href="https://instagram.com/">Instagram</a>
+      <a href="https://line.me/R/ti/p/%40example">LINE</a>
+    </nav>
+    <p class="credits">
+      เว็บตัวอย่าง ร้านนี้ไม่มีอยู่จริง / Demo site, this café isn't real.<br>
+      Photos via Wikimedia Commons, color-adjusted: Shixart1985 (CC BY 2.0), Kim Sanso (CC0), T.Tseng (CC BY 2.0),
+      Chainwit. (CC BY-SA 4.0), Vyacheslav Argenberg (CC BY 4.0).
+    </p>
+  </footer>
+
+  <script src="hours.js"></script>
+</body>
+</html>

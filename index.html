@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ตัวอย่างเว็บไซต์ร้านค้า หน้าเดียว</title>
+  <meta name="description" content="ตัวอย่างเว็บไซต์หน้าเดียวสำหรับคาเฟ่ ร้านอาหาร และติวเตอร์ รองรับมือถือ เชื่อม LINE">
+  <link href="https://fonts.googleapis.com/css2?family=Anuphan:wght@400;500;700&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: "Anuphan", sans-serif; color: #16181D; background: #ECEEF1; line-height: 1.6; }
+    .wrap { max-width: 1080px; margin: 0 auto; padding: 56px 20px 64px; }
+    h1 { font-size: clamp(1.8rem, 5vw, 2.6rem); line-height: 1.3; }
+    .lead { color: #4A505C; margin: 8px 0 36px; max-width: 34em; }
+
+    /* One column on phones, four on wide screens */
+    .demos { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }   /* 3 styles side by side, even on phones */
+    @media (min-width: 860px) { .demos { gap: 24px; max-width: 820px; } .demo strong { font-size: 1rem; } .demo span { font-size: .9rem; } }
+    .demo { text-decoration: none; color: inherit; }
+    .demo img { width: 100%; display: block; border-radius: 14px; border: 4px solid #111; }
+    .demo strong { display: block; margin-top: 10px; font-size: .88rem; line-height: 1.4; }
+    .demo strong .nb { display: inline; white-space: nowrap; color: inherit; font-size: inherit; margin: 0; }
+    .demo span { display: block; color: #4A505C; font-size: .8rem; line-height: 1.4; margin-top: 2px; }
+    .demo:hover strong, .demo:focus-visible strong { text-decoration: underline; }
+    .demo:focus-visible { outline: 3px solid #16181D; outline-offset: 4px; border-radius: 18px; }
+
+    h2 { font-size: 1.3rem; margin: 40px 0 16px; }
+    .lead + h2 { margin-top: 0; }
+    .note { color: #4A505C; font-size: .92rem; margin-top: 14px; }
+    .contact { margin-top: 48px; color: #4A505C; font-size: .95rem; }
+  </style>
+</head>
+<body>
+  <main class="wrap">
+    <h1>ตัวอย่างเว็บไซต์หน้าเดียว</h1>
+    <p class="lead">กดเพื่อดูเว็บจริง ลองเปิดในมือถือได้เลย ทุกแบบปรับสี ข้อความ และเมนูให้เป็นของร้านคุณได้</p>
+
+    <h2>คาเฟ่ ร้านอาหาร</h2>
+    <div class="demos">
+      <a class="demo" href="cafe-a/"><img src="img/a-m.jpg" alt="ร้านกาแฟ สไตล์ป้ายร้านเก่า" loading="lazy"><strong>A <span class="nb">ป้ายร้านเก่า</span></strong><span>ร้านดั้งเดิม อบอุ่น</span></a>
+      <a class="demo" href="cafe-b/"><img src="img/b-m.jpg" alt="ร้านกาแฟ สไตล์สดใส" loading="lazy"><strong>B สดใส</strong><span>ร้านวัยรุ่น เครื่องดื่ม ขนม</span></a>
+      <a class="demo" href="cafe-c/"><img src="img/c-m.jpg" alt="ร้านกาแฟ สไตล์เรียบ สงบ" loading="lazy"><strong>C <span class="nb">เรียบ สงบ</span></strong><span>ดูพรีเมียม รูปเด่น</span></a>
+    </div>
+
+    <h2>ติวเตอร์ โรงเรียนกวดวิชา</h2>
+    <div class="demos">
+      <a class="demo" href="tutor-a/"><img src="img/ta-m.jpg" alt="ติวเตอร์ สไตล์ป้ายร้านเก่า" loading="lazy"><strong>A <span class="nb">ป้ายร้านเก่า</span></strong><span>กวดวิชาสยามแบบดั้งเดิม</span></a>
+      <a class="demo" href="tutor-b/"><img src="img/tb-m.jpg" alt="ติวเตอร์ สไตล์สดใส" loading="lazy"><strong>B สดใส</strong><span>มีรีวิวผู้ปกครองวิ่งด้านบน</span></a>
+      <a class="demo" href="tutor-c/"><img src="img/tc-m.jpg" alt="ติวเตอร์ สไตล์เรียบ สงบ" loading="lazy"><strong>C <span class="nb">เรียบ สงบ</span></strong><span>สะอาด อ่านง่าย</span></a>
+    </div>
+    <p class="note">ทุกแบบมีโจทย์ให้ลองทำในเว็บ ผู้ปกครองเห็นวิธีสอนจริงก่อนจ้าง</p>
+
+    <p class="contact">สนใจทำเว็บ ทักได้ที่ Fastwork<br>ร้าน ติวเตอร์ ชื่อ และรูปในตัวอย่างเป็นข้อมูลสมมติ</p>
+  </main>
+</body>
+</html>

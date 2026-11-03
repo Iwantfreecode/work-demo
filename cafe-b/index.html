@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>กาแฟเหมือนเดิม | โอเลี้ยงถุงผ้า ซอยเกษมสันต์</title>
+  <meta name="description" content="ร้านกาแฟเล็ก ๆ ซอยเกษมสันต์ ใกล้ BTS สนามกีฬาฯ โอเลี้ยงถุงผ้าสูตรเดิม สั่งล่วงหน้าทาง LINE">
+  <meta property="og:title" content="กาแฟเหมือนเดิม ซอยเกษมสันต์">
+  <meta property="og:description" content="โอเลี้ยงถุงผ้าสูตรเดิม สั่งล่วงหน้าทาง LINE">
+  <meta property="og:image" content="img/share.jpg">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48'%3E%3Ccircle cx='24' cy='24' r='24' fill='%231E40C8'/%3E%3Cpath d='M13 15C13 25 17 33 21 37C25 33 29 25 29 15Z' fill='%23FFD23F'/%3E%3C/svg%3E">
+  <link href="https://fonts.googleapis.com/css2?family=Anuphan:wght@400;600;700&display=swap" rel="stylesheet">
+
+  <style>
+    /* ---------- Bold colors (Partners Coffee / Sightglass style) ---------- */
+    :root {
+      --blue:   #1E40C8;
+      --yellow: #FFD23F;
+      --sky:    #DCE6FF;
+      --ink:    #0F1640;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: "Anuphan", sans-serif; color: var(--ink); background: #fff; line-height: 1.6; font-size: 17px; }
+    img { display: block; width: 100%; height: 100%; object-fit: cover; }
+    a { color: inherit; }
+    .wrap { max-width: 1160px; margin: 0 auto; padding-inline: 20px; }
+    .nb { white-space: nowrap; }
+    h1, h2 { font-weight: 700; line-height: 1.15; letter-spacing: -.01em; text-wrap: balance; }
+
+    /* ---------- 1. Scrolling reviews strip (the only animation) ---------- */
+    .ticker { background: var(--blue); color: var(--yellow); overflow: hidden; white-space: nowrap; font-size: .9rem; font-weight: 600; }
+    .ticker-track { display: inline-block; padding: 8px 0; animation: scroll 40s linear infinite; }
+    .ticker-track span { margin: 0 28px; }
+    @keyframes scroll { to { transform: translateX(-50%); } }   /* the text is written twice, so -50% loops seamlessly */
+    @media (prefers-reduced-motion: reduce) { .ticker-track { animation: none; } }
+
+    /* ---------- 2. Header with big bold nav words (Sightglass) ---------- */
+    header .wrap { display: flex; align-items: center; justify-content: space-between; height: 76px; gap: 16px; }
+    .logo { display: flex; align-items: center; gap: 8px; text-decoration: none; color: var(--blue); font-weight: 700; font-size: 1.35rem; }
+    .logo svg { width: 38px; height: 38px; }
+    .nav { display: none; gap: 26px; font-weight: 700; font-size: 1.25rem; }
+    .nav a { text-decoration: none; }
+    .nav a:hover { color: var(--blue); }
+    @media (min-width: 820px) { .nav { display: flex; } }
+
+    .btn { display: inline-block; text-decoration: none; font-weight: 700; padding: 12px 24px; border-radius: 999px; }
+    .btn-yellow { background: var(--yellow); color: var(--ink); }
+    .btn-blue { background: var(--blue); color: #fff; }
+    .btn-line { background: #06C755; color: #fff; }
+    .btn-ghost { border: 2px solid currentColor; padding: 10px 22px; }
+
+    /* ---------- 3. Hero: text on sky blue, photo with one big rounded corner ---------- */
+    .hero { background: var(--sky); }
+    .hero .wrap { display: grid; gap: 28px; align-items: center; padding-block: 44px; }
+    @media (min-width: 820px) { .hero .wrap { grid-template-columns: 1fr 1.1fr; padding-block: 64px; } }
+    .hero h1 { font-size: clamp(2.6rem, 9vw, 4.6rem); color: var(--blue); }
+    .hero p { font-size: 1.15rem; margin: 14px 0 24px; max-width: 26em; }
+    .hero-photo { position: relative; aspect-ratio: 5 / 4; border-radius: 0 0 0 160px; overflow: hidden; }
+
+    /* Round sticker, slightly tilted */
+    .sticker {
+      position: absolute; display: grid; place-items: center; text-align: center;
+      width: 112px; height: 112px; border-radius: 50%;
+      background: var(--yellow); color: var(--ink); font-weight: 700; line-height: 1.2; font-size: .95rem;
+      transform: rotate(-12deg);
+    }
+    .hero-photo .sticker { top: 14px; right: 14px; }
+
+    /* ---------- 4. Menu: each drink on its own color tile ---------- */
+    .menu { padding-block: 72px; }
+    .menu h2 { font-size: clamp(2rem, 6vw, 3rem); color: var(--blue); margin-bottom: 28px; }
+    .tiles { display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px; }
+    @media (min-width: 820px) { .tiles { grid-template-columns: repeat(4, 1fr); gap: 20px; } }
+    .tile { position: relative; padding: 14px 14px 18px; background: var(--sky); }
+    .tile:nth-child(even) { background: var(--yellow); }
+    .tile .photo { aspect-ratio: 1; border-radius: 50%; overflow: hidden; border: 4px solid #fff; }
+    .tile h3 { font-size: 1.1rem; font-weight: 700; margin-top: 14px; }
+    .tile .en { font-size: .85rem; opacity: .7; }
+    .tile .price { font-size: 1.8rem; font-weight: 700; color: var(--blue); line-height: 1.2; margin-top: 6px; }
+    .tile .sticker { width: 64px; height: 64px; font-size: .78rem; top: 6px; right: 6px; background: var(--blue); color: #fff; }
+
+    .others { margin-top: 28px; display: flex; flex-wrap: wrap; gap: 10px; }
+    .others span { border: 2px solid var(--ink); border-radius: 999px; padding: 6px 16px; font-weight: 600; }
+
+    /* ---------- 5. Story on yellow ---------- */
+    .story { background: var(--yellow); }
+    .story .wrap { display: grid; gap: 28px; align-items: center; padding-block: 64px; }
+    @media (min-width: 820px) { .story .wrap { grid-template-columns: 1fr 1fr; } }
+    .story h2 { font-size: clamp(2rem, 6vw, 3rem); }
+    .story p { font-size: 1.1rem; margin-top: 12px; }
+    .story .photo { aspect-ratio: 4 / 3; border-radius: 160px 0 0 0; overflow: hidden; }
+
+    /* ---------- 6. Visit on blue ---------- */
+    .visit { background: var(--blue); color: #fff; }
+    .visit .wrap { display: grid; gap: 32px; padding-block: 64px; }
+    @media (min-width: 820px) { .visit .wrap { grid-template-columns: 1fr 1fr; } }
+    .visit h2 { font-size: clamp(2rem, 6vw, 3rem); color: var(--yellow); }
+    .visit p { font-size: 1.1rem; margin-top: 10px; }
+    .btns { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 22px; }
+    .hours-row { display: flex; justify-content: space-between; padding: 9px 0; border-bottom: 1px solid rgba(255,255,255,.25); font-size: 1.05rem; }
+    .hours-row.today { color: var(--yellow); font-weight: 700; }
+
+    footer { background: var(--ink); color: #fff; padding: 32px 0; font-size: .9rem; }
+    footer .credits { opacity: .55; font-size: .75rem; margin-top: 8px; }
+
+    a:focus-visible { outline: 3px solid var(--ink); outline-offset: 3px; }
+    .visit a:focus-visible { outline-color: var(--yellow); }
+  </style>
+</head>
+<body>
+
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+    <symbol id="mark" viewBox="0 0 48 48">
+      <circle cx="24" cy="24" r="24" fill="currentColor"/>
+      <ellipse cx="21" cy="15" rx="8" ry="2.6" fill="none" stroke="#FFD23F" stroke-width="2"/>
+      <path d="M13 15 C13 25 17 33 21 37 C25 33 29 25 29 15" fill="#FFD23F"/>
+      <path d="M29 15 L38 10" stroke="#FFD23F" stroke-width="2.4" stroke-linecap="round"/>
+    </symbol>
+  </svg>
+
+  <!-- Reviews strip. Written twice so the loop has no gap. -->
+  <div class="ticker" aria-label="รีวิวจากลูกค้า">
+    <div class="ticker-track">
+      <span>“โอเลี้ยงที่ใกล้สยามที่สุดที่ยังหอมแบบนี้” คุณมายด์</span><span>“สั่งทางไลน์ไว้ ไปถึงรับเลย ไม่ต้องรอ” คุณบอส</span><span>“ลาเต้เย็นหวานน้อยคือดี” คุณแพร</span>
+      <span>“โอเลี้ยงที่ใกล้สยามที่สุดที่ยังหอมแบบนี้” คุณมายด์</span><span>“สั่งทางไลน์ไว้ ไปถึงรับเลย ไม่ต้องรอ” คุณบอส</span><span>“ลาเต้เย็นหวานน้อยคือดี” คุณแพร</span>
+    </div>
+  </div>
+
+  <header>
+    <div class="wrap">
+      <a class="logo" href="#"><svg><use href="#mark"/></svg>เหมือนเดิม</a>
+      <nav class="nav"><a href="#menu">เมนู</a><a href="#story">ร้านเรา</a><a href="#visit">มาที่ร้าน</a></nav>
+      <a class="btn btn-line" href="https://line.me/R/ti/p/%40example">แอดไลน์</a>
+    </div>
+  </header>
+
+  <section class="hero">
+    <div class="wrap">
+      <div>
+        <h1><span class="nb">โอเลี้ยงถุงผ้า</span> <span class="nb">ใกล้สยาม</span></h1>
+        <p>สั่งทาง LINE ก่อนออกจากออฟฟิศ เดินจาก BTS สนามกีฬาฯ 3 นาที แก้วรอคุณอยู่แล้ว</p>
+        <a class="btn btn-blue" href="#menu">ดูเมนู</a>
+      </div>
+      <div class="hero-photo">
+        <img src="img/hero.jpg" alt="กำลังชงกาแฟที่เคาน์เตอร์" width="1200" height="675">
+        <div class="sticker">ตั้งแต่<br>2557</div>
+      </div>
+    </div>
+  </section>
+
+  <section id="menu" class="wrap menu">
+    <h2>แก้วประจำของทุกคน</h2>
+    <div class="tiles">
+      <div class="tile"><div class="photo"><img src="img/oliang.jpg" alt="โอเลี้ยง" loading="lazy"></div><div class="sticker">ขายดี</div>
+        <h3>โอเลี้ยง</h3><div class="en">Oliang</div><div class="price">45.-</div></div>
+      <div class="tile"><div class="photo"><img src="img/iced-jar.jpg" alt="กาแฟเย็นแก้วโหล" loading="lazy"></div>
+        <h3>กาแฟเย็นแก้วโหล</h3><div class="en">Thai iced coffee</div><div class="price">55.-</div></div>
+      <div class="tile"><div class="photo"><img src="img/iced-latte.jpg" alt="ลาเต้เย็น" loading="lazy"></div>
+        <h3>ลาเต้เย็น</h3><div class="en">Iced latte</div><div class="price">65.-</div></div>
+      <div class="tile"><div class="photo"><img src="img/latte.jpg" alt="ลาเต้ร้อน" loading="lazy"></div>
+        <h3>ลาเต้ร้อน</h3><div class="en">Hot latte</div><div class="price">60.-</div></div>
+    </div>
+    <div class="others"><span>อเมริกาโน่ 55</span><span>ชาไทย 50</span><span>ชามะนาว 45</span><span>โกโก้เย็น 55</span></div>
+  </section>
+
+  <section id="story" class="story">
+    <div class="wrap">
+      <div class="photo"><img src="img/barista.jpg" alt="กดผงกาแฟลงด้ามชง" loading="lazy"></div>
+      <div>
+        <h2>จากรถเข็น<br>หน้าซอย</h2>
+        <p>ปี 2557 พี่ต้อมขายโอเลี้ยงจากรถเข็นหน้าซอยเกษมสันต์ วันนี้มีหน้าร้านแล้ว แต่ยังชงด้วย<span class="nb">ถุงผ้า</span>แบบเดิม</p>
+        <p>หลายคนสั่ง<span class="nb">แก้วเดิม</span>ทุกวัน ชื่อร้านก็มาจากตรงนั้น</p>
+      </div>
+    </div>
+  </section>
+
+  <section id="visit" class="visit">
+    <div class="wrap">
+      <div>
+        <h2>มาที่ร้าน</h2>
+        <p>ซอยเกษมสันต์ 2 เดิน 3 นาทีจาก <span class="nb">BTS สนามกีฬาแห่งชาติ</span> ทางออก 1</p>
+        <div class="btns">
+          <a class="btn btn-yellow" href="https://line.me/R/ti/p/%40example">แอดไลน์ สั่งล่วงหน้า</a>
+          <a class="btn btn-ghost" href="https://maps.google.com/?q=Soi+Kasemsan+2+Bangkok">แผนที่</a>
+          <a class="btn btn-ghost" href="https://lineman.line.me/">LINE MAN</a>
+          <a class="btn btn-ghost" href="https://food.grab.com/th/">Grab</a>
+        </div>
+      </div>
+      <div id="hours"></div>
+    </div>
+  </section>
+
+  <footer>
+    <div class="wrap">
+      เหมือนเดิม ซอยเกษมสันต์ 2 ปทุมวัน กรุงเทพฯ
+      <div class="credits">เว็บตัวอย่าง ร้านนี้ไม่มีอยู่จริง รีวิวเป็นตัวอย่าง / Demo site, reviews are samples. Photos via Wikimedia Commons, color-adjusted: Shixart1985 (CC BY 2.0), Kim Sanso (CC0), T.Tseng (CC BY 2.0), Chainwit. (CC BY-SA 4.0), Vyacheslav Argenberg (CC BY 4.0).</div>
+    </div>
+  </footer>
+
+  <script src="hours.js"></script>
+</body>
+</html>
