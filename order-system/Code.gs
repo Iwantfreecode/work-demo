@@ -1,13 +1,13 @@
 /**
- * ระบบรับออเดอร์ร้าน: หน้าเว็บ → Google Sheets → แจ้งเตือน LINE
- * Order system: website form → Google Sheet → LINE alert to the shop.
+ * ระบบรับออเดอร์ร้าน: หน้าเว็บ → Google Sheets → แจ้งเตือน LINE (ไทย / English)
+ * Order system: website form → Google Sheet → LINE alert to the shop (Thai / English).
  *
  * Paste this whole file into Extensions → Apps Script of a Google Sheet.
  * Then add 3 Script properties (Project Settings → Script properties):
  *   LINE_TOKEN     Channel access token from LINE Developers (Messaging API tab)
- *   WEBHOOK_KEY    any random text, e.g. kx81-mo2q. Also goes at the end of the webhook URL
- *   REGISTER_CODE  a code the shop owner types in LINE once, e.g. 4821
- * ADMIN_IDS is saved by the script itself when the owner registers.
+ *   WEBHOOK_KEY    any random text. Also goes at the end of the webhook URL (?key=...)
+ *   REGISTER_CODE  a code the shop owner types in LINE once
+ * ADMIN_IDS and LAST_ID are saved by the script itself.
  * Full steps: SETUP.md
  */
 
@@ -16,12 +16,12 @@
 // Prices live HERE, not in the web page. Anyone can edit a web page in their browser,
 // so the script always recalculates the total from this list.
 const MENU = {
-  oliang:     { name: 'โอเลี้ยง',         price: 45 },
-  icedcoffee: { name: 'กาแฟเย็นแก้วโหล',  price: 55 },
-  icedlatte:  { name: 'ลาเต้เย็น',         price: 65 },
-  hotlatte:   { name: 'ลาเต้ร้อน',         price: 60 },
-  americano:  { name: 'อเมริกาโน่',        price: 55 },
-  thaitea:    { name: 'ชาไทย',            price: 50 },
+  oliang:     { th: 'โอเลี้ยง',        en: 'Oliang',           price: 45 },
+  icedcoffee: { th: 'กาแฟเย็นแก้วโหล', en: 'Thai iced coffee', price: 55 },
+  icedlatte:  { th: 'ลาเต้เย็น',        en: 'Iced latte',       price: 65 },
+  hotlatte:   { th: 'ลาเต้ร้อน',        en: 'Hot latte',        price: 60 },
+  americano:  { th: 'อเมริกาโน่',       en: 'Americano',        price: 55 },
+  thaitea:    { th: 'ชาไทย',           en: 'Thai tea',         price: 50 },
 };
 
 const SHOP_NAME = 'เหมือนเดิม';
@@ -30,10 +30,30 @@ const TZ = 'Asia/Bangkok';
 
 // ---------- 2. Sheet layout ----------
 const SHEET_NAME = 'Orders';
-const HEADERS = ['เลขที่', 'เวลาสั่ง', 'ชื่อ', 'เบอร์โทร', 'รายการ', 'ยอดรวม', 'เวลารับ', 'หมายเหตุ', 'สถานะ'];
-const COL = { id: 1, time: 2, status: 9 };   // column numbers we read or change later
+const HEADERS = ['เลขที่ / No.', 'เวลาสั่ง / Time', 'ชื่อ / Name', 'เบอร์โทร / Phone', 'รายการ / Items',
+                 'ยอดรวม / Total', 'เวลารับ / Pickup', 'หมายเหตุ / Note', 'สถานะ / Status'];
+const COL = { id: 1, time: 2, total: 6, status: 9 };   // column numbers we read or change later
 
-const STATUS = { new: 'ใหม่', accepted: 'รับแล้ว', ready: 'พร้อมรับ', cancelled: 'ยกเลิก' };
+const STATUS = {
+  new:       'ใหม่ / New',
+  accepted:  'รับแล้ว / Accepted',
+  ready:     'พร้อมรับ / Ready',
+  cancelled: 'ยกเลิก / Cancelled',
+};
+
+// Owner commands: Thai or English word → status
+const COMMANDS = {
+  'รับ': STATUS.accepted,    'accept': STATUS.accepted,
+  'เสร็จ': STATUS.ready,      'ready': STATUS.ready,
+  'ยกเลิก': STATUS.cancelled, 'cancel': STATUS.cancelled,
+};
+
+const HELP_TEXT =
+  'คำสั่ง / Commands\n' +
+  'รับ 12 / accept 12 = ยืนยันออเดอร์ / confirm order\n' +
+  'เสร็จ 12 / ready 12 = พร้อมให้รับ / ready for pickup\n' +
+  'ยกเลิก 12 / cancel 12 = ยกเลิก / cancel\n' +
+  'สรุป / summary = ยอดวันนี้ / today\'s sales';
 
 const props = PropertiesService.getScriptProperties();
 
@@ -72,24 +92,24 @@ function handleOrder(order) {
   const pickup = String(order.pickup || '').slice(0, 20);
   const note = String(order.note || '').trim().slice(0, 120);
 
-  if (!name) return { ok: false, error: 'กรุณาใส่ชื่อ' };
-  if (phone.length < 9 || phone.length > 10) return { ok: false, error: 'เบอร์โทรไม่ถูกต้อง' };
+  if (!name) return { ok: false, error: 'กรุณาใส่ชื่อ / Please enter your name' };
+  if (phone.length < 9 || phone.length > 10) return { ok: false, error: 'เบอร์โทรไม่ถูกต้อง / Invalid phone number' };
 
   // Rebuild the item list from MENU so prices can't be faked.
   const lines = [];
   let total = 0;
   (order.items || []).forEach(item => {
-    const menuItem = MENU[item.id];
+    const m = MENU[item.id];
     const qty = Math.min(Math.max(parseInt(item.qty, 10) || 0, 0), 20);
-    if (!menuItem || qty === 0) return;
-    lines.push(`${menuItem.name} x${qty}`);
-    total += menuItem.price * qty;
+    if (!m || qty === 0) return;
+    lines.push(`${m.th} (${m.en}) x${qty}`);
+    total += m.price * qty;
   });
-  if (lines.length === 0) return { ok: false, error: 'ยังไม่ได้เลือกเมนู' };
+  if (lines.length === 0) return { ok: false, error: 'ยังไม่ได้เลือกเมนู / No drinks selected' };
 
   // One order per phone number every 30 seconds, so double-taps don't create two orders.
   const cache = CacheService.getScriptCache();
-  if (cache.get('recent-' + phone)) return { ok: false, error: 'เพิ่งสั่งไป รอสักครู่แล้วลองใหม่' };
+  if (cache.get('recent-' + phone)) return { ok: false, error: 'เพิ่งสั่งไป รอสักครู่ / Just ordered, please wait a moment' };
   cache.put('recent-' + phone, '1', 30);
 
   // The lock makes sure two orders at the same moment don't get the same number.
@@ -107,13 +127,13 @@ function handleOrder(order) {
   }
 
   pushToAdmins(
-    `🧾 ออเดอร์ใหม่ #${id}\n` +
-    `คุณ${name} ${formatPhone(phone)}\n` +
+    `🧾 ออเดอร์ใหม่ / New order #${id}\n` +
+    `${name} ${formatPhone(phone)}\n` +
     lines.map(l => '• ' + l).join('\n') + '\n' +
-    `รวม ${total} บาท\n` +
-    `รับเวลา ${pickup || 'ไม่ระบุ'}` +
-    (note ? `\nหมายเหตุ: ${note}` : '') +
-    `\n\nตอบ "รับ ${id}" เพื่อยืนยัน`
+    `รวม / Total: ${total} บาท\n` +
+    `รับเวลา / Pickup: ${pickup || '-'}` +
+    (note ? `\nหมายเหตุ / Note: ${note}` : '') +
+    `\n\nตอบ / Reply "รับ ${id}" หรือ / or "accept ${id}"`
   );
 
   return { ok: true, id: id, total: total };
@@ -128,39 +148,32 @@ function handleLineEvent(ev) {
   const userId = ev.source.userId;
   const admins = getAdmins();
 
-  // First-time setup: owner types "ลงทะเบียน 4821"
-  const reg = text.match(/^ลงทะเบียน\s*(\S+)$/);
+  // First-time setup: owner types "ลงทะเบียน 5917" or "register 5917"
+  const reg = text.match(/^(?:ลงทะเบียน|register)\s*(\S+)$/i);
   if (reg) {
-    if (reg[1] !== props.getProperty('REGISTER_CODE')) return reply(ev.replyToken, 'รหัสไม่ถูกต้อง');
+    if (reg[1] !== props.getProperty('REGISTER_CODE')) return reply(ev.replyToken, 'รหัสไม่ถูกต้อง / Wrong code');
     if (!admins.includes(userId)) {
       admins.push(userId);
       props.setProperty('ADMIN_IDS', JSON.stringify(admins));
     }
-    return reply(ev.replyToken, `ลงทะเบียนแล้ว ✓\nออเดอร์ใหม่จะแจ้งมาที่นี่\n\n${HELP_TEXT}`);
+    return reply(ev.replyToken, 'ลงทะเบียนแล้ว ✓ / Registered ✓\nออเดอร์ใหม่จะแจ้งมาที่นี่ / New orders will arrive here\n\n' + HELP_TEXT);
   }
 
   // Customers chatting with the shop: leave them to the shop's normal LINE chat.
   if (!admins.includes(userId)) return;
 
-  // "รับ 12" / "เสร็จ 12" / "ยกเลิก 12"
-  const cmd = text.match(/^(รับ|เสร็จ|ยกเลิก)\s*#?(\d+)$/);
-  if (cmd) {
-    const newStatus = { 'รับ': STATUS.accepted, 'เสร็จ': STATUS.ready, 'ยกเลิก': STATUS.cancelled }[cmd[1]];
+  // "รับ 12" / "accept 12" / "เสร็จ 12" / "ready 12" / "ยกเลิก 12" / "cancel 12"
+  const cmd = text.match(/^(\S+)\s*#?(\d+)$/);
+  const newStatus = cmd && COMMANDS[cmd[1].toLowerCase()];
+  if (newStatus) {
     const found = setStatus(Number(cmd[2]), newStatus);
-    return reply(ev.replyToken, found ? `#${cmd[2]} → ${newStatus} ✓` : `ไม่พบออเดอร์ #${cmd[2]}`);
+    return reply(ev.replyToken, found ? `#${cmd[2]} → ${newStatus} ✓` : `ไม่พบออเดอร์ / Order not found #${cmd[2]}`);
   }
 
-  if (text === 'สรุป') return reply(ev.replyToken, buildSummary());
+  if (text === 'สรุป' || text.toLowerCase() === 'summary') return reply(ev.replyToken, buildSummary());
 
   return reply(ev.replyToken, HELP_TEXT);
 }
-
-const HELP_TEXT =
-  'คำสั่งที่ใช้ได้\n' +
-  'รับ 12 = ยืนยันออเดอร์ #12\n' +
-  'เสร็จ 12 = ชงเสร็จ พร้อมให้ลูกค้ารับ\n' +
-  'ยกเลิก 12 = ยกเลิกออเดอร์\n' +
-  'สรุป = ยอดวันนี้และออเดอร์ที่ยังค้าง';
 
 
 // ========== Daily summary ==========
@@ -171,13 +184,15 @@ function buildSummary() {
   const todays = rows.filter(r => r[COL.time - 1] instanceof Date &&
     Utilities.formatDate(r[COL.time - 1], TZ, 'yyyy-MM-dd') === today);
   const valid = todays.filter(r => r[COL.status - 1] !== STATUS.cancelled);
-  const sales = valid.reduce((sum, r) => sum + Number(r[5]), 0);
+  const sales = valid.reduce((sum, r) => sum + Number(r[COL.total - 1]), 0);
   const pending = todays.filter(r => r[COL.status - 1] === STATUS.new || r[COL.status - 1] === STATUS.accepted);
 
-  return `📊 สรุปวันนี้ (${SHOP_NAME})\n` +
-    `ออเดอร์ ${valid.length} รายการ\n` +
-    `ยอดขาย ${sales.toLocaleString()} บาท` +
-    (pending.length ? `\nยังค้าง: ${pending.map(r => '#' + r[0]).join(' ')}` : '\nไม่มีออเดอร์ค้าง ✓');
+  return `📊 สรุปวันนี้ / Today (${SHOP_NAME})\n` +
+    `ออเดอร์ / Orders: ${valid.length}\n` +
+    `ยอดขาย / Sales: ${sales.toLocaleString()} บาท` +
+    (pending.length
+      ? `\nยังค้าง / Pending: ${pending.map(r => '#' + r[0]).join(' ')}`
+      : '\nไม่มีออเดอร์ค้าง / Nothing pending ✓');
 }
 
 // Runs every day at SUMMARY_HOUR (set up once with setupDailySummary)
@@ -209,7 +224,8 @@ function getSheet() {
 
 function setStatus(id, status) {
   const sheet = getSheet();
-  const ids = sheet.getRange(2, COL.id, Math.max(sheet.getLastRow() - 1, 1)).getValues().flat();
+  if (sheet.getLastRow() < 2) return false;
+  const ids = sheet.getRange(2, COL.id, sheet.getLastRow() - 1).getValues().flat();
   const index = ids.indexOf(id);
   if (index === -1) return false;
   sheet.getRange(index + 2, COL.status).setValue(status);
@@ -251,5 +267,5 @@ function json(obj) {
 
 // Run this from the editor after setup to check LINE works without placing an order.
 function testLineMessage() {
-  pushToAdmins('ทดสอบ ✓ ระบบออเดอร์เชื่อมกับ LINE แล้ว');
+  pushToAdmins('ทดสอบ ✓ ระบบออเดอร์เชื่อมกับ LINE แล้ว\nTest ✓ The order system is connected to LINE');
 }

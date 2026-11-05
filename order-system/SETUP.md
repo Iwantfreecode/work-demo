@@ -38,7 +38,7 @@ You need: a Google account, a LINE account.
    Turn on **Use webhook**.
    (The **Verify** button may show an error because Apps Script answers with a redirect. That's a known quirk; test by sending a message instead.)
 2. Add your Official Account as a friend in LINE (QR code on manager.line.biz).
-3. In the chat, send: `ลงทะเบียน 4821` (your REGISTER_CODE). It should reply "ลงทะเบียนแล้ว ✓".
+3. In the chat, send: `ลงทะเบียน 4821` or `register 4821` (your REGISTER_CODE). It should reply "ลงทะเบียนแล้ว ✓ / Registered ✓".
 4. In Apps Script, pick `testLineMessage` in the function menu and press **Run**. You should get "ทดสอบ ✓" in LINE.
 5. Pick `setupDailySummary` and press **Run** once. Now you get a summary at 21:00 every day.
 
@@ -52,11 +52,12 @@ Push to GitHub. Place a test order. You should see a new row in the sheet and a 
 
 ---
 
-## Commands in LINE (owner only)
-- `รับ 12`: accept order 12
-- `เสร็จ 12`: drink ready
-- `ยกเลิก 12`: cancel
-- `สรุป`: today's sales and orders still pending
+## Commands in LINE (owner only, Thai or English)
+- `รับ 12` / `accept 12`: accept order 12
+- `เสร็จ 12` / `ready 12`: drink ready
+- `ยกเลิก 12` / `cancel 12`: cancel
+- `สรุป` / `summary`: today's sales and orders still pending
+- `ลงทะเบียน <code>` / `register <code>`: become an owner (once)
 
 ## Limits to tell clients
 - Each new order sends 1 LINE message per registered owner. LINE's free plan has a monthly limit (check the number in LINE OA Manager → plan). Replies to the owner's commands are free.
