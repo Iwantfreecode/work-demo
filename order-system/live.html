@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>สั่งล่วงหน้า | กาแฟเหมือนเดิม (live test)</title>
+  <meta name="robots" content="noindex">
+  <meta name="description" content="สั่งกาแฟล่วงหน้า มาถึงรับได้เลย ร้านได้รับออเดอร์ทาง LINE ทันที">
+  <meta property="og:title" content="สั่งล่วงหน้า กาแฟเหมือนเดิม">
+  <meta property="og:description" content="เลือกเมนู ใส่ชื่อ เลือกเวลารับ ร้านได้ออเดอร์ทาง LINE ทันที">
+  <meta property="og:image" content="https://iwantfreecode.github.io/work-demo/cafe-c/img/share.jpg">
+  <link href="https://fonts.googleapis.com/css2?family=Anuphan:wght@400;500;700&family=Pridi:wght@600&display=swap" rel="stylesheet">
+
+  <style>
+    :root { --brand: #24392D; --text: #222; --muted: #707070; --line: #E6E6E6; --tint: #F4F2EE; }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: "Anuphan", sans-serif; color: var(--text); background: var(--tint); line-height: 1.6; }
+    .nb { white-space: nowrap; }
+
+    header { background: var(--brand); color: #fff; text-align: center; padding: 18px 16px; }
+    header .name { font-family: "Pridi", serif; font-size: 1.5rem; }
+    header p { font-size: .9rem; opacity: .85; }
+
+    main { max-width: 560px; margin: 0 auto; padding: 20px 16px 120px; }
+    .box { background: #fff; border-radius: 10px; padding: 18px; margin-bottom: 14px; }
+    h2 { font-size: 1.05rem; font-weight: 700; margin-bottom: 10px; }
+
+    /* Menu rows: name + price on the left, - qty + on the right */
+    .item { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--line); }
+    .item:last-child { border-bottom: 0; }
+    .item .price { color: var(--muted); font-size: .9rem; }
+    .qty { display: flex; align-items: center; gap: 10px; }
+    .qty button { width: 36px; height: 36px; border-radius: 50%; border: 1.5px solid var(--brand); background: #fff; color: var(--brand); font-size: 1.2rem; cursor: pointer; }
+    .qty .n { min-width: 1.2em; text-align: center; font-weight: 700; }
+    .item.on .name { font-weight: 700; }
+
+    label { display: block; font-size: .92rem; margin: 12px 0 4px; }
+    input, select, textarea { width: 100%; font: inherit; padding: 11px 12px; border: 1.5px solid var(--line); border-radius: 8px; background: #fff; }
+    input:focus, select:focus, textarea:focus { outline: none; border-color: var(--brand); }
+    .hp { position: absolute; left: -9999px; }   /* hidden spam trap */
+
+    /* Sticky bar at the bottom with total + send button */
+    .bar { position: fixed; left: 0; right: 0; bottom: 0; background: #fff; border-top: 1px solid var(--line); padding: 12px 16px calc(12px + env(safe-area-inset-bottom)); }
+    .bar-inner { max-width: 560px; margin: 0 auto; display: flex; align-items: center; gap: 14px; }
+    .bar .total { font-size: 1.15rem; font-weight: 700; }
+    .bar .total small { display: block; font-weight: 400; font-size: .8rem; color: var(--muted); }
+    .send { flex: 1; padding: 14px; border: 0; border-radius: 8px; background: var(--brand); color: #fff; font: inherit; font-weight: 700; cursor: pointer; }
+    .send:disabled { background: #B9B9B9; cursor: default; }
+    button:focus-visible { outline: 3px solid #06C755; outline-offset: 2px; }
+
+    .error { color: #C0392B; font-size: .9rem; margin-top: 10px; min-height: 1.2em; }
+
+    /* Result screen */
+    .done { display: none; text-align: center; }
+    .done.show { display: block; }
+    .done .big { font-family: "Pridi", serif; font-size: 2.6rem; color: var(--brand); }
+
+    /* Demo preview: looks like the LINE chat the shop receives */
+    .chat { background: #8CABD9; border-radius: 10px; padding: 14px; text-align: left; margin-top: 14px; }
+    .chat .who { color: #fff; font-size: .8rem; margin-bottom: 6px; }
+    .bubble { background: #fff; border-radius: 16px; border-top-left-radius: 4px; padding: 10px 14px; white-space: pre-line; font-size: .95rem; max-width: 92%; }
+    .demo-note { font-size: .85rem; color: var(--muted); margin-top: 10px; }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="name">เหมือนเดิม</div>
+    <p>สั่งล่วงหน้า มาถึงรับได้เลย ไม่ต้องต่อคิว</p>
+  </header>
+
+  <main>
+    <form id="form" novalidate>
+      <div class="box">
+        <h2>เลือกเมนู</h2>
+        <div id="menu"></div>
+      </div>
+
+      <div class="box">
+        <h2>ข้อมูลผู้สั่ง</h2>
+        <label for="name">ชื่อ</label>
+        <input id="name" autocomplete="given-name" maxlength="50" required>
+        <label for="phone">เบอร์โทร</label>
+        <input id="phone" type="tel" inputmode="numeric" autocomplete="tel" maxlength="12" placeholder="08x-xxx-xxxx" required>
+        <label for="pickup">เวลารับ</label>
+        <select id="pickup"></select>
+        <label for="note">หมายเหตุ (ถ้ามี)</label>
+        <textarea id="note" rows="2" maxlength="120" placeholder="เช่น หวานน้อย ไม่ใส่น้ำแข็ง"></textarea>
+        <input class="hp" id="website" tabindex="-1" autocomplete="off" aria-hidden="true">
+        <div class="error" id="error" role="alert"></div>
+      </div>
+    </form>
+
+    <div class="box done" id="done" aria-live="polite"></div>
+  </main>
+
+  <div class="bar" id="bar">
+    <div class="bar-inner">
+      <div class="total"><span id="total">0</span> บาท<small id="count">ยังไม่ได้เลือก</small></div>
+      <button class="send" id="send" form="form" disabled>ส่งออเดอร์</button>
+    </div>
+  </div>
+
+  <script>
+    /* ---------- Settings ----------
+       SCRIPT_URL: the Apps Script web app address (from Deploy → New deployment).
+       Leave it empty and the page runs in DEMO mode: nothing is sent,
+       it just shows the LINE message the shop would get. */
+    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbz5edy9XEBrk8argF2hgVFSm_-C39S9FmlKRXO-zHdSECI9hg201WRQx3oZXWvx6H63/exec";
+    const OPEN = 7, CLOSE = 16;       // pickup times offered, in hours
+
+    // Same ids as MENU in Code.gs. Prices here are only for showing the total;
+    // the script recalculates them, so editing this page can't change what's charged.
+    const MENU = [
+      { id: "oliang",     name: "โอเลี้ยง",        price: 45 },
+      { id: "icedcoffee", name: "กาแฟเย็นแก้วโหล", price: 55 },
+      { id: "icedlatte",  name: "ลาเต้เย็น",        price: 65 },
+      { id: "hotlatte",   name: "ลาเต้ร้อน",        price: 60 },
+      { id: "americano",  name: "อเมริกาโน่",       price: 55 },
+      { id: "thaitea",    name: "ชาไทย",           price: 50 },
+    ];
+
+    const qty = {};                 // { oliang: 2, ... }
+    const $ = id => document.getElementById(id);
+
+    /* ---------- Menu ---------- */
+    $("menu").innerHTML = MENU.map(m => `
+      <div class="item" id="row-${m.id}">
+        <div><div class="name">${m.name}</div><div class="price">${m.price} บาท</div></div>
+        <div class="qty">
+          <button type="button" data-id="${m.id}" data-step="-1" aria-label="ลด ${m.name}">−</button>
+          <span class="n" id="n-${m.id}">0</span>
+          <button type="button" data-id="${m.id}" data-step="1" aria-label="เพิ่ม ${m.name}">+</button>
+        </div>
+      </div>`).join("");
+
+    $("menu").addEventListener("click", e => {
+      const b = e.target.closest("button");
+      if (!b) return;
+      const id = b.dataset.id;
+      qty[id] = Math.min(20, Math.max(0, (qty[id] || 0) + Number(b.dataset.step)));
+      $("n-" + id).textContent = qty[id];
+      $("row-" + id).classList.toggle("on", qty[id] > 0);
+      updateTotal();
+    });
+
+    function chosen() {
+      return MENU.filter(m => qty[m.id] > 0).map(m => ({ ...m, qty: qty[m.id] }));
+    }
+
+    function updateTotal() {
+      const items = chosen();
+      const total = items.reduce((s, m) => s + m.price * m.qty, 0);
+      const cups = items.reduce((s, m) => s + m.qty, 0);
+      $("total").textContent = total;
+      $("count").textContent = cups ? `${cups} แก้ว` : "ยังไม่ได้เลือก";
+      $("send").disabled = cups === 0;
+    }
+
+    /* ---------- Pickup times: every 15 min, starting 15 min from now (Bangkok time) ---------- */
+    function fillPickupTimes() {
+      const now = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Bangkok" }));
+      let mins = Math.ceil((now.getHours() * 60 + now.getMinutes() + 15) / 15) * 15;
+      const opts = [];
+      for (; mins <= CLOSE * 60; mins += 15) {
+        if (mins < OPEN * 60) continue;
+        const t = `${String(Math.floor(mins / 60)).padStart(2, "0")}:${String(mins % 60).padStart(2, "0")}`;
+        opts.push(`<option>${t}</option>`);
+      }
+      $("pickup").innerHTML = opts.length ? opts.join("") : `<option>พรุ่งนี้ ${OPEN}:00</option>`;
+    }
+    fillPickupTimes();
+
+    /* ---------- Send ---------- */
+    $("form").addEventListener("submit", async e => {
+      e.preventDefault();
+      $("error").textContent = "";
+
+      const order = {
+        type: "order",
+        name: $("name").value.trim(),
+        phone: $("phone").value.replace(/\D/g, ""),
+        pickup: $("pickup").value,
+        note: $("note").value.trim(),
+        website: $("website").value,                        // spam trap, should stay empty
+        items: chosen().map(m => ({ id: m.id, qty: m.qty })),
+      };
+
+      if (!order.name) return showError("กรุณาใส่ชื่อ");
+      if (order.phone.length < 9 || order.phone.length > 10) return showError("เบอร์โทรไม่ถูกต้อง");
+
+      if (!SCRIPT_URL) return showDemo(order);
+
+      $("send").disabled = true;
+      $("send").textContent = "กำลังส่ง...";
+      try {
+        // text/plain avoids an extra browser check that Apps Script can't answer
+        const res = await fetch(SCRIPT_URL, { method: "POST", headers: { "Content-Type": "text/plain" }, body: JSON.stringify(order) });
+        const data = await res.json();
+        if (!data.ok) throw new Error(data.error || "ส่งไม่สำเร็จ");
+        showDone(data.id, data.total);
+      } catch (err) {
+        showError(err.message.startsWith("Failed") ? "เน็ตมีปัญหา ลองใหม่อีกครั้ง" : err.message);
+        $("send").disabled = false;
+        $("send").textContent = "ส่งออเดอร์";
+      }
+    });
+
+    function showError(msg) { $("error").textContent = msg; }
+
+    function showDone(id, total) {
+      $("form").hidden = true; $("bar").hidden = true;
+      $("done").innerHTML = `
+        <p>ได้รับออเดอร์แล้ว</p>
+        <div class="big">#${id}</div>
+        <p>ยอด ${total} บาท จ่ายตอนรับที่ร้าน</p>
+        <p class="demo-note">บอกเลขนี้ที่หน้าร้าน รับเวลา ${$("pickup").value}</p>`;
+      $("done").classList.add("show");
+      window.scrollTo(0, 0);
+    }
+
+    // Demo mode: build the exact message Code.gs would push to the shop's LINE.
+    function showDemo(o) {
+      const items = chosen();
+      const total = items.reduce((s, m) => s + m.price * m.qty, 0);
+      const p = o.phone.length === 10 ? `${o.phone.slice(0,3)}-${o.phone.slice(3,6)}-${o.phone.slice(6)}` : o.phone;
+      const msg =
+        `🧾 ออเดอร์ใหม่ #12\nคุณ${o.name} ${p}\n` +
+        items.map(m => `• ${m.name} x${m.qty}`).join("\n") +
+        `\nรวม ${total} บาท\nรับเวลา ${o.pickup}` +
+        (o.note ? `\nหมายเหตุ: ${o.note}` : "") +
+        `\n\nตอบ "รับ 12" เพื่อยืนยัน`;
+
+      $("form").hidden = true; $("bar").hidden = true;
+      $("done").innerHTML = `
+        <p>ลูกค้าเห็นหน้านี้</p>
+        <div class="big">#12</div>
+        <p>ยอด ${total} บาท จ่ายตอนรับที่ร้าน</p>
+        <div class="chat">
+          <div class="who">ร้านได้รับใน LINE ทันที</div>
+          <div class="bubble"></div>
+        </div>
+        <p class="demo-note">โหมดตัวอย่าง ยังไม่ได้ส่งจริง ข้อมูลจะถูกบันทึกลง Google Sheets ด้วย</p>`;
+      $("done").querySelector(".bubble").textContent = msg;   // textContent: whatever was typed is shown as plain text
+      $("done").classList.add("show");
+      window.scrollTo(0, 0);
+    }
+  </script>
+</body>
+</html>
