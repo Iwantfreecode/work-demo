@@ -148,16 +148,9 @@ function handleLineEvent(ev) {
   const userId = ev.source.userId;
   const admins = getAdmins();
 
-  // First-time setup: owner types "ลงทะเบียน 5917" or "register 5917"
+  // Owner setup: "ลงทะเบียน 5917" or "register 5917"
   const reg = text.match(/^(?:ลงทะเบียน|register)\s*(\S+)$/i);
-  if (reg) {
-    if (reg[1] !== props.getProperty('REGISTER_CODE')) return reply(ev.replyToken, 'รหัสไม่ถูกต้อง / Wrong code');
-    if (!admins.includes(userId)) {
-      admins.push(userId);
-      props.setProperty('ADMIN_IDS', JSON.stringify(admins));
-    }
-    return reply(ev.replyToken, 'ลงทะเบียนแล้ว ✓ / Registered ✓\nออเดอร์ใหม่จะแจ้งมาที่นี่ / New orders will arrive here\n\n' + HELP_TEXT);
-  }
+  if (reg) return handleRegister(ev, userId, reg[1], admins);
 
   // Customers chatting with the shop: leave them to the shop's normal LINE chat.
   if (!admins.includes(userId)) return;
@@ -173,6 +166,36 @@ function handleLineEvent(ev) {
   if (text === 'สรุป' || text.toLowerCase() === 'summary') return reply(ev.replyToken, buildSummary());
 
   return reply(ev.replyToken, HELP_TEXT);
+}
+
+
+// ========== Owner registration ==========
+// The code works ONCE: after a successful register it is deleted, so nobody else can reuse it.
+// To add a staff member later: set a new REGISTER_CODE in Script properties, they register, it's deleted again.
+// Owners see customers' names and phone numbers, so this door has to stay shut.
+function handleRegister(ev, userId, code, admins) {
+  if (admins.includes(userId)) return reply(ev.replyToken, 'ลงทะเบียนไว้แล้ว / Already registered ✓');
+
+  // 5 wrong codes → this LINE user is ignored for an hour (stops guessing)
+  const cache = CacheService.getScriptCache();
+  const triesKey = 'tries-' + userId;
+  const tries = Number(cache.get(triesKey) || 0);
+  if (tries >= 5) return;
+
+  const realCode = props.getProperty('REGISTER_CODE');
+  if (!realCode || code !== realCode) {
+    cache.put(triesKey, String(tries + 1), 3600);
+    return reply(ev.replyToken, 'รหัสไม่ถูกต้อง / Wrong code');
+  }
+
+  // Tell the existing owners someone new was added, so a stranger getting in can't go unnoticed.
+  pushToAdmins('⚠️ มีผู้ดูแลใหม่ลงทะเบียน / A new admin just registered.\nถ้าไม่ใช่คนที่รู้จัก ลบ ADMIN_IDS ใน Script properties\nIf you don\'t know who this is, delete ADMIN_IDS in Script properties.');
+
+  admins.push(userId);
+  props.setProperty('ADMIN_IDS', JSON.stringify(admins));
+  props.deleteProperty('REGISTER_CODE');            // one-time code: used up now
+
+  return reply(ev.replyToken, 'ลงทะเบียนแล้ว ✓ / Registered ✓\nออเดอร์ใหม่จะแจ้งมาที่นี่ / New orders will arrive here\n\n' + HELP_TEXT);
 }
 
 

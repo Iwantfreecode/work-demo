@@ -59,6 +59,12 @@ Push to GitHub. Place a test order. You should see a new row in the sheet and a 
 - `สรุป` / `summary`: today's sales and orders still pending
 - `ลงทะเบียน <code>` / `register <code>`: become an owner (once)
 
+## Owner security
+- The REGISTER_CODE works **once**. After someone registers, the script deletes it.
+- To add staff: set a new `REGISTER_CODE` in Script properties, they register, it's deleted again. Existing owners get a ⚠️ alert.
+- 5 wrong codes from one LINE user = ignored for an hour.
+- To remove everyone: delete `ADMIN_IDS` in Script properties, then register again with a new code.
+
 ## Limits to tell clients
 - Each new order sends 1 LINE message per registered owner. LINE's free plan has a monthly limit (check the number in LINE OA Manager → plan). Replies to the owner's commands are free.
 - Changed `Code.gs`? **Deploy → Manage deployments → Edit → New version**, or the old code keeps running.
