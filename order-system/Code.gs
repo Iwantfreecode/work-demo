@@ -171,7 +171,7 @@ function handleOrder(order) {
     // A saved counter, not the row count, so deleting a row never repeats a number.
     id = Number(props.getProperty('LAST_ID') || 0) + 1;
     props.setProperty('LAST_ID', String(id));
-    sheet.appendRow([id, new Date(), name, "'" + phone, lines.join('\n'), total, pickup, note, STATUS.new, PAY.atPickup, when.at]);
+    sheet.appendRow([id, new Date(), name, "'" + phone, lines.join('\n'), total, pickup, note, STATUS.new, PAY.atPickup, "'" + when.at]);
   } finally {
     lock.releaseLock();
   }
@@ -387,6 +387,11 @@ function getSheet() {
   return sheet;
 }
 
+// Google Sheets quietly turns text that looks like a date into a real date. Turn it back so the board can read it.
+function cellText(v) {
+  return v instanceof Date ? Utilities.formatDate(v, TZ, 'yyyy-MM-dd HH:mm') : String(v || '');
+}
+
 // One sheet row → the order object the cards and the board use.
 function rowToOrder(r) {
   return {
@@ -400,7 +405,7 @@ function rowToOrder(r) {
     note: String(r[COL.note - 1]),
     status: r[COL.status - 1],
     payment: r[COL.payment - 1] || PAY.atPickup,       // rows from before the Payment column
-    at: String(r[COL.pickupAt - 1] || ''),             // 'yyyy-MM-dd HH:mm', empty on old rows
+    at: cellText(r[COL.pickupAt - 1]),                 // 'yyyy-MM-dd HH:mm', empty on old rows
   };
 }
 
@@ -471,6 +476,7 @@ function shortPickup(o, today) {
 
 function boardMessage(orders) {
   const today = Utilities.formatDate(new Date(), TZ, 'yyyy-MM-dd');
+  const now = Utilities.formatDate(new Date(), TZ, 'HH:mm');
   const text = (t, extra) => Object.assign({ type: 'text', text: String(t), size: 'md', color: '#222222' }, extra);
 
   const counts = [[STATUS.new, 'ใหม่', 'New'], [STATUS.accepted, 'ยืนยันแล้ว', 'Accepted'], [STATUS.ready, 'พร้อมรับ', 'Ready']]
@@ -509,7 +515,11 @@ function boardMessage(orders) {
   }
   return { type: 'flex', altText: `📋 ออเดอร์ที่ค้าง / Active orders: ${orders.length}`, contents: { type: 'bubble',
     header: { type: 'box', layout: 'vertical', backgroundColor: BRAND_COLOR, paddingAll: '16px', spacing: '4px', contents: header },
-    body: { type: 'box', layout: 'vertical', paddingAll: '16px', spacing: '12px', contents: body } } };
+    body: { type: 'box', layout: 'vertical', paddingAll: '16px', spacing: '12px', contents: body },
+    // LINE draws the shortcut chips over the bottom ~45px of the last message. This empty-ish strip sits under
+    // the last button so the chips cover it, not a button. It also shows how fresh the list is.
+    footer: { type: 'box', layout: 'vertical', height: '56px', justifyContent: 'center', paddingStart: '16px', paddingEnd: '16px',
+              contents: [ text(`อัปเดต ${now} / Updated ${now}`, { size: 'sm', color: '#707070' }) ] } } };
 }
 
 // Plain text version of the board, if LINE ever refuses the card.
