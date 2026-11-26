@@ -38,27 +38,50 @@ const SLOT_MIN = 15;              // later pickups are every 15 minutes
 // ---------- 2. Sheet layout ----------
 const SHEET_NAME = 'Orders';
 const HEADERS = ['เลขที่ / No.', 'เวลาสั่ง / Time', 'ชื่อ / Name', 'เบอร์โทร / Phone', 'รายการ / Items',
-                 'ยอดรวม / Total', 'เวลารับ / Pickup', 'หมายเหตุ / Note', 'สถานะ / Status'];
-const COL = { id: 1, time: 2, total: 6, status: 9 };   // column numbers we read or change later
+                 'ยอดรวม / Total', 'เวลารับ / Pickup', 'หมายเหตุ / Note', 'สถานะ / Status', 'การชำระเงิน / Payment'];
+const COL = { id: 1, time: 2, name: 3, phone: 4, items: 5, total: 6, pickup: 7, note: 8, status: 9, payment: 10 };
 
 const STATUS = {
   new:       'ใหม่ / New',
-  accepted:  'รับแล้ว / Accepted',
+  accepted:  'ยืนยันแล้ว / Accepted',
   ready:     'พร้อมรับ / Ready',
+  picked:    'รับแล้ว / Picked up',
   cancelled: 'ยกเลิก / Cancelled',
 };
 
-// Owner commands: Thai or English word → status
-const COMMANDS = {
-  'รับ': STATUS.accepted,    'accept': STATUS.accepted,
-  'เสร็จ': STATUS.ready,      'ready': STATUS.ready,
-  'ยกเลิก': STATUS.cancelled, 'cancel': STATUS.cancelled,
+// Payment is its own column: it is not the same question as "how far is the order".
+// Today everyone pays at the shop, so tapping "Picked up" marks it paid.
+// An online-payment add-on would write PAY.paid earlier.
+const PAY = {
+  atPickup: 'จ่ายหน้าร้าน / Pay at pickup',
+  paid:     'จ่ายแล้ว / Paid',
 };
 
+// What each action does. Buttons and typed commands both go through these.
+// An order only moves forward (rank goes up) or gets cancelled, so an old button can't undo anything.
+const ACTIONS = {
+  accept: STATUS.accepted,
+  ready:  STATUS.ready,
+  picked: STATUS.picked,
+  cancel: STATUS.cancelled,
+};
+const RANK = { [STATUS.new]: 0, [STATUS.accepted]: 1, [STATUS.ready]: 2, [STATUS.picked]: 3 };
+
+// Owner commands: Thai or English word → action
+const COMMANDS = {
+  'รับ': 'accept',      'accept': 'accept',
+  'เสร็จ': 'ready',      'ready': 'ready',
+  'รับแล้ว': 'picked',   'picked': 'picked',
+  'ยกเลิก': 'cancel',    'cancel': 'cancel',
+};
+
+const BRAND_COLOR = '#24392D';    // button card colour (same green as the order page)
+
 const HELP_TEXT =
-  'คำสั่ง / Commands\n' +
+  'คำสั่ง / Commands (หรือกดปุ่มในออเดอร์ / or tap the buttons)\n' +
   'รับ 12 / accept 12 = ยืนยันออเดอร์ / confirm order\n' +
   'เสร็จ 12 / ready 12 = พร้อมให้รับ / ready for pickup\n' +
+  'รับแล้ว 12 / picked 12 = ลูกค้ารับแล้ว จ่ายแล้ว / picked up and paid\n' +
   'ยกเลิก 12 / cancel 12 = ยกเลิก / cancel\n' +
   'สรุป / summary = ยอดวันนี้ / today\'s sales';
 
@@ -135,20 +158,13 @@ function handleOrder(order) {
     // A saved counter, not the row count, so deleting a row never repeats a number.
     id = Number(props.getProperty('LAST_ID') || 0) + 1;
     props.setProperty('LAST_ID', String(id));
-    sheet.appendRow([id, new Date(), name, "'" + phone, lines.join('\n'), total, pickup, note, STATUS.new]);
+    sheet.appendRow([id, new Date(), name, "'" + phone, lines.join('\n'), total, pickup, note, STATUS.new, PAY.atPickup]);
   } finally {
     lock.releaseLock();
   }
 
-  pushToAdmins(
-    `🧾 ออเดอร์ใหม่ / New order #${id}\n` +
-    `${name} ${formatPhone(phone)}\n` +
-    lines.map(l => '• ' + l).join('\n') + '\n' +
-    `รวม / Total: ${total} บาท\n` +
-    `รับเวลา / Pickup: ${pickup || '-'}` +
-    (note ? `\nหมายเหตุ / Note: ${note}` : '') +
-    `\n\nตอบ / Reply "รับ ${id}" หรือ / or "accept ${id}"`
-  );
+  pushOrderCard({ id: id, name: name, phone: phone, items: lines, total: total, pickup: pickup, note: note,
+                  status: STATUS.new, payment: PAY.atPickup });
 
   return { ok: true, id: id, total: total, pickup: pickup };
 }
@@ -220,6 +236,8 @@ function resolvePickup(pickup, today, nowMin) {
 
 // ========== Messages the shop owner sends to the LINE OA ==========
 function handleLineEvent(ev) {
+  // A button tap on an order card
+  if (ev.type === 'postback') return handlePostback(ev);
   if (ev.type !== 'message' || ev.message.type !== 'text') return;
 
   const text = ev.message.text.trim();
@@ -233,17 +251,29 @@ function handleLineEvent(ev) {
   // Customers chatting with the shop: leave them to the shop's normal LINE chat.
   if (!admins.includes(userId)) return;
 
-  // "รับ 12" / "accept 12" / "เสร็จ 12" / "ready 12" / "ยกเลิก 12" / "cancel 12"
+  // "รับ 12" / "accept 12" / "เสร็จ 12" / "ready 12" / "รับแล้ว 12" / "picked 12" / "ยกเลิก 12" / "cancel 12"
   const cmd = text.match(/^(\S+)\s*#?(\d+)$/);
-  const newStatus = cmd && COMMANDS[cmd[1].toLowerCase()];
-  if (newStatus) {
-    const found = setStatus(Number(cmd[2]), newStatus);
-    return reply(ev.replyToken, found ? `#${cmd[2]} → ${newStatus} ✓` : `ไม่พบออเดอร์ / Order not found #${cmd[2]}`);
-  }
+  const action = cmd && COMMANDS[cmd[1].toLowerCase()];
+  if (action) return runAction(ev.replyToken, action, Number(cmd[2]));
 
   if (text === 'สรุป' || text.toLowerCase() === 'summary') return reply(ev.replyToken, buildSummary());
 
   return reply(ev.replyToken, HELP_TEXT);
+}
+
+
+// Button data looks like "accept:12". Only registered owners can use the buttons.
+function handlePostback(ev) {
+  if (!getAdmins().includes(ev.source.userId)) return;
+  const m = String(ev.postback.data).match(/^(accept|ready|picked|cancel):(\d+)$/);
+  if (m) runAction(ev.replyToken, m[1], Number(m[2]));
+}
+
+// Same path for typed commands and button taps: change the order, then answer with the new card.
+function runAction(replyToken, action, id) {
+  const result = applyAction(action, id);
+  if (!result.order) return reply(replyToken, result.text);
+  replyCard(replyToken, result.order);
 }
 
 
@@ -285,12 +315,14 @@ function buildSummary() {
   const todays = rows.filter(r => r[COL.time - 1] instanceof Date &&
     Utilities.formatDate(r[COL.time - 1], TZ, 'yyyy-MM-dd') === today);
   const valid = todays.filter(r => r[COL.status - 1] !== STATUS.cancelled);
-  const sales = valid.reduce((sum, r) => sum + Number(r[COL.total - 1]), 0);
-  const pending = todays.filter(r => r[COL.status - 1] === STATUS.new || r[COL.status - 1] === STATUS.accepted);
+  // Sales only count orders the customer has picked up and paid for.
+  const sales = valid.filter(r => r[COL.status - 1] === STATUS.picked)
+    .reduce((sum, r) => sum + Number(r[COL.total - 1]), 0);
+  const pending = valid.filter(r => r[COL.status - 1] !== STATUS.picked);
 
   return `📊 สรุปวันนี้ / Today (${SHOP_NAME})\n` +
     `ออเดอร์ / Orders: ${valid.length}\n` +
-    `ยอดขาย / Sales: ${sales.toLocaleString()} บาท` +
+    `ยอดขาย / Sales: ${sales.toLocaleString()} บาท (เฉพาะที่รับแล้ว / picked-up only)` +
     (pending.length
       ? `\nยังค้าง / Pending: ${pending.map(r => '#' + r[0]).join(' ')}`
       : '\nไม่มีออเดอร์ค้าง / Nothing pending ✓');
@@ -320,18 +352,128 @@ function getSheet() {
     sheet.setFrozenRows(1);
     sheet.getRange(1, 1, 1, HEADERS.length).setFontWeight('bold');
   }
+  // Sheets made before the Payment column existed get its header added once.
+  if (!sheet.getRange(1, COL.payment).getValue()) {
+    sheet.getRange(1, COL.payment).setValue(HEADERS[COL.payment - 1]).setFontWeight('bold');
+  }
   return sheet;
 }
 
-function setStatus(id, status) {
+// Find one order by its number. Returns { row, order } or null.
+function findOrder(id) {
   const sheet = getSheet();
-  if (sheet.getLastRow() < 2) return false;
-  const ids = sheet.getRange(2, COL.id, sheet.getLastRow() - 1).getValues().flat();
-  const index = ids.indexOf(id);
-  if (index === -1) return false;
-  sheet.getRange(index + 2, COL.status).setValue(status);
-  return true;
+  const values = sheet.getDataRange().getValues();
+  for (let i = 1; i < values.length; i++) {
+    const r = values[i];
+    if (Number(r[COL.id - 1]) !== id) continue;
+    return { row: i + 1, order: {
+      id: id,
+      name: String(r[COL.name - 1]),
+      phone: String(r[COL.phone - 1]),
+      items: String(r[COL.items - 1]).split('\n'),
+      total: r[COL.total - 1],
+      pickup: String(r[COL.pickup - 1]),
+      note: String(r[COL.note - 1]),
+      status: r[COL.status - 1],
+      payment: r[COL.payment - 1] || PAY.atPickup,     // rows from before the Payment column
+    } };
+  }
+  return null;
 }
+
+// Move an order to its next status. Returns { order } on success or { text } with the reason.
+// The lock matters: two quick taps can't both pass the check and both change the row.
+function applyAction(action, id) {
+  const lock = LockService.getScriptLock();
+  lock.waitLock(10000);
+  try {
+    const found = findOrder(id);
+    if (!found) return { text: `ไม่พบออเดอร์ / Order not found #${id}` };
+
+    const order = found.order, target = ACTIONS[action];
+    const closed = order.status === STATUS.cancelled || order.status === STATUS.picked;
+    const backwards = action !== 'cancel' && RANK[target] <= RANK[order.status];
+    if (closed || backwards) {
+      return { text: `#${id} ตอนนี้ / now: ${order.status}\nทำรายการนี้ไม่ได้ / Can't do that now` };
+    }
+
+    const sheet = getSheet();
+    sheet.getRange(found.row, COL.status).setValue(target);
+    order.status = target;
+    if (target === STATUS.picked && order.payment === PAY.atPickup) {
+      order.payment = PAY.paid;                       // paid at the counter
+      sheet.getRange(found.row, COL.payment).setValue(PAY.paid);
+    }
+    return { order: order };
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+
+// ========== The order card (buttons in LINE) ==========
+// One card is used for the new-order alert and for every answer after a tap,
+// so the order always looks the same and shows only the next step.
+function orderText(o) {
+  const title = o.status === STATUS.new ? 'ออเดอร์ใหม่ / New order' : 'ออเดอร์ / Order';
+  return `🧾 ${title} #${o.id} · ${o.status}\n` +
+    `${o.name} ${formatPhone(o.phone)}\n` +
+    o.items.map(l => '• ' + l).join('\n') + '\n' +
+    `รวม / Total: ${o.total} บาท\n` +
+    `รับเวลา / Pickup: ${o.pickup || '-'}\n` +
+    `ชำระเงิน / Payment: ${o.payment}` +
+    (o.note ? `\nหมายเหตุ / Note: ${o.note}` : '');
+}
+
+function orderCard(o) {
+  const text = (t, extra) => Object.assign({ type: 'text', text: String(t), wrap: true, size: 'md', color: '#222222' }, extra);
+  const caption = t => text(t, { size: 'sm', color: '#707070' });
+  const field = (label, value) => ({ type: 'box', layout: 'vertical', spacing: '4px', contents: [caption(label), text(value, { weight: 'bold' })] });
+
+  const body = [
+    text(`${o.name}  ${formatPhone(o.phone)}`, { weight: 'bold' }),
+    { type: 'box', layout: 'vertical', spacing: '4px', contents: o.items.map(l => text('• ' + l)) },
+    { type: 'separator' },
+    { type: 'box', layout: 'horizontal', contents: [
+      text('รวม / Total', { flex: 1 }), text(`${o.total} บาท`, { weight: 'bold', align: 'end', flex: 0, wrap: false }) ] },
+    field('รับเวลา / Pickup', o.pickup || '-'),
+  ];
+  if (o.note) body.push(field('หมายเหตุ / Note', o.note));
+  body.push(field('การชำระเงิน / Payment', o.payment));
+
+  const bubble = {
+    type: 'bubble',
+    header: { type: 'box', layout: 'vertical', backgroundColor: BRAND_COLOR, paddingAll: '16px', spacing: '4px', contents: [
+      text(`ออเดอร์ #${o.id} / Order #${o.id}`, { size: 'lg', weight: 'bold', color: '#FFFFFF' }),
+      text(o.status, { size: 'sm', color: '#DCE5DF' }) ] },
+    body: { type: 'box', layout: 'vertical', paddingAll: '16px', spacing: '12px', contents: body },
+  };
+  const buttons = cardButtons(o);
+  if (buttons.length) bubble.footer = { type: 'box', layout: 'vertical', paddingAll: '16px', spacing: '8px', contents: buttons };
+
+  return { type: 'flex', altText: orderText(o).slice(0, 400), contents: bubble };     // altText = the lock-screen preview
+}
+
+// One big main button for the next step, one quiet Cancel. Nothing after Picked up / Cancelled.
+function cardButtons(o) {
+  const next = { [STATUS.new]: ['accept', 'รับ / Accept'], [STATUS.accepted]: ['ready', 'พร้อมรับ / Ready'],
+                 [STATUS.ready]: ['picked', 'รับแล้ว / Picked up'] }[o.status];
+  if (!next) return [];
+  return [ cardButton(next[1], `${next[0]}:${o.id}`, true), cardButton('ยกเลิก / Cancel', `cancel:${o.id}`, false) ];
+}
+
+// A tappable box (48px tall, easy to hit) instead of LINE's thinner standard button.
+function cardButton(label, data, primary) {
+  const box = {
+    type: 'box', layout: 'vertical', height: '48px', justifyContent: 'center', alignItems: 'center', cornerRadius: '8px',
+    action: { type: 'postback', label: label, data: data },
+    contents: [{ type: 'text', text: label, size: 'md', weight: primary ? 'bold' : 'regular', color: primary ? '#FFFFFF' : '#555555' }],
+  };
+  if (primary) box.backgroundColor = BRAND_COLOR;
+  else { box.borderWidth = '1px'; box.borderColor = '#D0D0D0'; }
+  return box;
+}
+
 
 function getAdmins() {
   return JSON.parse(props.getProperty('ADMIN_IDS') || '[]');
@@ -342,11 +484,26 @@ function pushToAdmins(text) {
   getAdmins().forEach(to => lineApi('push', { to: to, messages: [{ type: 'text', text: text }] }));
 }
 
+// New order alert with buttons. If LINE refuses the card for any reason, send the plain text version
+// instead, so the shop never misses an order.
+function pushOrderCard(o) {
+  getAdmins().forEach(to => {
+    if (lineApi('push', { to: to, messages: [orderCard(o)] })) return;
+    const hint = `\n\nตอบ / Reply "รับ ${o.id}" หรือ / or "accept ${o.id}"`;
+    lineApi('push', { to: to, messages: [{ type: 'text', text: orderText(o) + hint }] });
+  });
+}
+
 // Reply = answering the owner's message. Free, doesn't use the quota.
 function reply(replyToken, text) {
   lineApi('reply', { replyToken: replyToken, messages: [{ type: 'text', text: text }] });
 }
 
+function replyCard(replyToken, o) {
+  if (!lineApi('reply', { replyToken: replyToken, messages: [orderCard(o)] })) reply(replyToken, `#${o.id} → ${o.status} ✓`);
+}
+
+// Returns true when LINE accepted the message.
 function lineApi(kind, payload) {
   const res = UrlFetchApp.fetch('https://api.line.me/v2/bot/message/' + kind, {
     method: 'post',
@@ -356,6 +513,7 @@ function lineApi(kind, payload) {
     muteHttpExceptions: true,
   });
   if (res.getResponseCode() !== 200) console.error('LINE error', res.getResponseCode(), res.getContentText());
+  return res.getResponseCode() === 200;
 }
 
 function formatPhone(p) {

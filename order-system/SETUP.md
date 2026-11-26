@@ -52,9 +52,18 @@ Push to GitHub. Place a test order. You should see a new row in the sheet and a 
 
 ---
 
-## Commands in LINE (owner only, Thai or English)
+## Buttons in LINE (owner only)
+Every new order arrives as a card with a big button for the next step:
+**รับ / Accept** → **พร้อมรับ / Ready** → **รับแล้ว / Picked up**, plus a quiet **ยกเลิก / Cancel**.
+- An order only moves forward. Tapping an old button again says "Can't do that now" and changes nothing.
+- **Picked up** marks the order paid (everyone pays at the shop for now). Daily sales count only picked-up orders.
+- If LINE ever refuses the card, the shop gets the same order as plain text with the typed command to reply.
+- The sheet has a **Payment** column. Old sheets get its header added automatically.
+
+## Typed commands (owner only, Thai or English, same result as the buttons)
 - `รับ 12` / `accept 12`: accept order 12
 - `เสร็จ 12` / `ready 12`: drink ready
+- `รับแล้ว 12` / `picked 12`: customer picked up and paid
 - `ยกเลิก 12` / `cancel 12`: cancel
 - `สรุป` / `summary`: today's sales and orders still pending
 - `ลงทะเบียน <code>` / `register <code>`: become an owner (once)
@@ -66,6 +75,6 @@ Push to GitHub. Place a test order. You should see a new row in the sheet and a 
 - To remove everyone: delete `ADMIN_IDS` in Script properties, then register again with a new code.
 
 ## Limits to tell clients
-- Each new order sends 1 LINE message per registered owner. LINE's free plan has a monthly limit (check the number in LINE OA Manager → plan). Replies to the owner's commands are free.
+- Each new order sends 1 LINE message per registered owner. LINE's free plan has a monthly limit (check the number in LINE OA Manager → plan). Replies to the owner's commands and button taps are free.
 - Changed `Code.gs`? **Deploy → Manage deployments → Edit → New version**, or the old code keeps running.
 - Keep `LINE_TOKEN` private. Never put it in the web page.
