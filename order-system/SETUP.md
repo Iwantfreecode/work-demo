@@ -61,9 +61,20 @@ Every new order arrives as a card with a big button for the next step:
 - The sheet has a **Payment** column and a **Pickup sort key** column (used to sort the board). Old sheets get both headers added automatically.
 
 ## The order board (for a busy shop)
-Tap the **📋 ออเดอร์ / Orders** chip under any message (or type `ออเดอร์` / `orders`). You get one list of every active order, soonest pickup first, with one button per order for its next step. The list refreshes after every tap. Tap the left side of a row to open the full card. Done and cancelled orders drop off. It shows 10 rows, then "N more".
+Tap **ออเดอร์ / Orders** in the bar at the bottom of the chat (the Rich menu below), or type `ออเดอร์` / `orders`. You get one list of every active order, soonest pickup first, with one button per order for its next step. The list refreshes after every tap. Tap the left side of a row to open the full card. Done and cancelled orders drop off. It shows 10 rows, then "N more".
 
 Each tap also shows a short message like `✓ รับ #3` in the chat straight away, so the tap feels instant while the script answers. The script ignores those messages.
+
+## Rich menu: the permanent bar at the bottom of the owner's chat
+Two big buttons, **ออเดอร์ / Orders** and **สรุปวันนี้ / Today's summary**. It never covers a message. It is shown to owners only, so customers chatting with the shop never see it. It takes about 130px of the screen, and the owner can fold it away with the **เมนู / Menu** tab.
+
+1. Make sure `richmenu.png` is online (it is in this repo, so GitHub Pages serves it a minute after a push).
+2. In Apps Script pick `setupRichMenu` and press **Run** once. It uploads the menu and gives it to every registered owner. You don't need to redeploy for this.
+3. New owners who register later get the bar automatically.
+4. To take it away: run `removeRichMenu`. Running `setupRichMenu` again replaces the menu, it doesn't pile up copies.
+5. To change colours or words: edit `richmenu-source.html`, screenshot it at exactly 2500 x 843, replace `richmenu.png`, push, run `setupRichMenu`.
+
+If Run shows "Could not download the menu image", GitHub Pages isn't updated yet: wait a minute and run again. The shop's own menus made in LINE OA Manager are never touched.
 
 ## Typed commands (owner only, Thai or English, same result as the buttons)
 - `รับ 12` / `accept 12`: accept order 12
@@ -89,7 +100,8 @@ Everything a shop might want to change is at the top of `Code.gs` (section 1) an
 | Page colour | `index.html` | `--brand` in the CSS |
 | Skip the "Accepted" step (New → Ready → Picked up) | `Code.gs` | `USE_ACCEPT_STEP = false` |
 | Instant tap message `✓ รับ #3` | `Code.gs` | `TAP_ECHO` |
-| 📋 / 📊 shortcut chips | `Code.gs` | `QUICK_REPLIES` |
+| Bottom bar (📋 Orders, 📊 Summary) | `Code.gs` | run `setupRichMenu` (on) or `removeRichMenu` (off) |
+| Chips under every message (off by default, they float over the last message) | `Code.gs` | `QUICK_REPLIES` |
 | Rows on the board | `Code.gs` | `BOARD_MAX` |
 
 After changing `Code.gs`, redeploy (see the limits below). After changing `index.html`, push and regenerate `live.html`.

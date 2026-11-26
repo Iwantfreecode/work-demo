@@ -39,8 +39,12 @@ const SLOT_MIN = 15;              // later pickups are every 15 minutes
 const BRAND_COLOR = '#24392D';    // card and button colour (the order page has its own --brand in its CSS)
 const USE_ACCEPT_STEP = true;     // false = skip "Accepted": New → Ready → Picked up (good for small shops)
 const TAP_ECHO = true;            // a button tap shows "✓ รับ #3" in the chat at once, before the answer arrives
-const QUICK_REPLIES = true;       // 📋 Orders / 📊 Summary shortcut chips under every message
+const QUICK_REPLIES = false;      // 📋 / 📊 chips under every message. Off: the Rich menu does this job and the chips float over the last message
 const BOARD_MAX = 10;             // rows shown on the order board
+
+// Rich menu: a permanent bar (📋 Orders, 📊 Summary) at the bottom of the owner's chat. Set up once with setupRichMenu.
+const RICH_MENU_NAME = 'owner-menu';
+const RICH_MENU_IMAGE_URL = 'https://iwantfreecode.github.io/work-demo/order-system/richmenu.png';   // 2500x843 PNG, under 1 MB
 
 // ---------- 2. Sheet layout ----------
 const SHEET_NAME = 'Orders';
@@ -98,6 +102,7 @@ const HELP_TEXT =
   'ออเดอร์ / orders = รายการที่ค้าง / active orders\n' +
   'สรุป / summary = ยอดวันนี้ / today\'s sales';
 
+const LINE_API = 'https://api.line.me/v2/bot';
 const props = PropertiesService.getScriptProperties();
 
 
@@ -325,6 +330,7 @@ function handleRegister(ev, userId, code, admins) {
   admins.push(userId);
   props.setProperty('ADMIN_IDS', JSON.stringify(admins));
   props.deleteProperty('REGISTER_CODE');            // one-time code: used up now
+  linkRichMenu(userId);                             // the new owner gets the bottom bar too
 
   return reply(ev.replyToken, 'ลงทะเบียนแล้ว ✓ / Registered ✓\nออเดอร์ใหม่จะแจ้งมาที่นี่ / New orders will arrive here\n\n' + HELP_TEXT);
 }
@@ -362,6 +368,52 @@ function setupDailySummary() {
     .filter(t => t.getHandlerFunction() === 'sendDailySummary')
     .forEach(t => ScriptApp.deleteTrigger(t));      // avoid duplicates if run twice
   ScriptApp.newTrigger('sendDailySummary').timeBased().atHour(SUMMARY_HOUR).everyDays(1).inTimezone(TZ).create();
+}
+
+
+// ========== Rich menu (permanent bottom bar for owners) ==========
+// Only owners get it: it is linked to each owner one by one, so customers chatting with the shop never see it.
+// Run setupRichMenu once from the editor, after richmenu.png is online. Run it again to replace the menu.
+// Run removeRichMenu to take it away.
+function setupRichMenu() {
+  // Download the image first, so a missing image fails before anything is changed.
+  const image = UrlFetchApp.fetch(RICH_MENU_IMAGE_URL, { muteHttpExceptions: true });
+  if (image.getResponseCode() !== 200) {
+    throw new Error('Could not download the menu image from ' + RICH_MENU_IMAGE_URL + '. Is GitHub Pages updated yet? Wait a minute and run again.');
+  }
+
+  removeRichMenu();                                 // so running twice doesn't pile up old menus
+  const created = lineCall('post', LINE_API + '/richmenu', {
+    size: { width: 2500, height: 843 }, selected: true, name: RICH_MENU_NAME, chatBarText: 'เมนู / Menu',
+    areas: [
+      { bounds: { x: 0, y: 0, width: 1250, height: 843 }, action: { type: 'message', label: 'ออเดอร์ / Orders', text: 'ออเดอร์' } },
+      { bounds: { x: 1250, y: 0, width: 1250, height: 843 }, action: { type: 'message', label: 'สรุป / Summary', text: 'สรุป' } },
+    ],
+  });
+  if (!created.ok) throw new Error('LINE refused the menu: ' + created.text);
+  const id = JSON.parse(created.text).richMenuId;
+
+  const uploaded = lineCall('post', 'https://api-data.line.me/v2/bot/richmenu/' + id + '/content', image.getBlob().getBytes(), 'image/png');
+  if (!uploaded.ok) throw new Error('LINE refused the image (it must be PNG or JPEG, 2500x843, under 1 MB): ' + uploaded.text);
+
+  props.setProperty('RICH_MENU_ID', id);
+  getAdmins().forEach(linkRichMenu);
+  console.log('Rich menu ready for ' + getAdmins().length + ' owner(s).');
+}
+
+// Deletes only the menu this script made (by name). Deleting it also removes it from every owner.
+function removeRichMenu() {
+  const list = lineCall('get', LINE_API + '/richmenu/list');
+  if (!list.ok) throw new Error('Could not read the menu list from LINE: ' + list.text);
+  JSON.parse(list.text).richmenus
+    .filter(m => m.name === RICH_MENU_NAME)
+    .forEach(m => lineCall('delete', LINE_API + '/richmenu/' + m.richMenuId));
+  props.deleteProperty('RICH_MENU_ID');
+}
+
+function linkRichMenu(userId) {
+  const id = props.getProperty('RICH_MENU_ID');
+  if (id) lineCall('post', `${LINE_API}/user/${userId}/richmenu/${id}`);
 }
 
 
@@ -516,9 +568,9 @@ function boardMessage(orders) {
   return { type: 'flex', altText: `📋 ออเดอร์ที่ค้าง / Active orders: ${orders.length}`, contents: { type: 'bubble',
     header: { type: 'box', layout: 'vertical', backgroundColor: BRAND_COLOR, paddingAll: '16px', spacing: '4px', contents: header },
     body: { type: 'box', layout: 'vertical', paddingAll: '16px', spacing: '12px', contents: body },
-    // LINE draws the shortcut chips over the bottom ~45px of the last message. This empty-ish strip sits under
+    // With the chips on, LINE draws them over the bottom ~45px of the last message. This strip sits under
     // the last button so the chips cover it, not a button. It also shows how fresh the list is.
-    footer: { type: 'box', layout: 'vertical', height: '56px', justifyContent: 'center', paddingStart: '16px', paddingEnd: '16px',
+    footer: { type: 'box', layout: 'vertical', height: QUICK_REPLIES ? '56px' : '40px', justifyContent: 'center', paddingStart: '16px', paddingEnd: '16px',
               contents: [ text(`อัปเดต ${now} / Updated ${now}`, { size: 'sm', color: '#707070' }) ] } } };
 }
 
@@ -661,15 +713,20 @@ const CHIPS = { items: [
 // Returns true when LINE accepted the message.
 function lineApi(kind, payload) {
   if (QUICK_REPLIES) payload.messages[payload.messages.length - 1].quickReply = CHIPS;
-  const res = UrlFetchApp.fetch('https://api.line.me/v2/bot/message/' + kind, {
-    method: 'post',
-    contentType: 'application/json',
-    headers: { Authorization: 'Bearer ' + props.getProperty('LINE_TOKEN') },
-    payload: JSON.stringify(payload),
-    muteHttpExceptions: true,
-  });
-  if (res.getResponseCode() !== 200) console.error('LINE error', res.getResponseCode(), res.getContentText());
-  return res.getResponseCode() === 200;
+  return lineCall('post', `${LINE_API}/message/${kind}`, payload).ok;
+}
+
+// Every call to LINE goes through here. Leave body out for calls without one; pass bytes + contentType for images.
+function lineCall(method, url, body, contentType) {
+  const options = { method: method, headers: { Authorization: 'Bearer ' + props.getProperty('LINE_TOKEN') }, muteHttpExceptions: true };
+  if (body !== undefined) {
+    options.contentType = contentType || 'application/json';
+    options.payload = contentType ? body : JSON.stringify(body);
+  }
+  const res = UrlFetchApp.fetch(url, options);
+  const ok = res.getResponseCode() === 200;
+  if (!ok) console.error('LINE error', res.getResponseCode(), res.getContentText());
+  return { ok: ok, text: res.getContentText() };
 }
 
 function formatPhone(p) {
