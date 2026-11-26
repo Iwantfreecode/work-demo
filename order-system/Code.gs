@@ -28,6 +28,13 @@ const SHOP_NAME = 'เหมือนเดิม';
 const SUMMARY_HOUR = 21;          // daily summary at 21:00
 const TZ = 'Asia/Bangkok';
 
+// Pickup rules. The order page has the same numbers at the top of its script: change both together.
+const OPEN_HOUR = 7;              // shop opens 07:00
+const CLOSE_HOUR = 16;            // last pickup 16:00
+const PREP_MIN = 15;              // minutes the shop needs to make an order
+const DAYS_AHEAD = 7;             // "order for later" up to 7 days ahead
+const SLOT_MIN = 15;              // later pickups are every 15 minutes
+
 // ---------- 2. Sheet layout ----------
 const SHEET_NAME = 'Orders';
 const HEADERS = ['เลขที่ / No.', 'เวลาสั่ง / Time', 'ชื่อ / Name', 'เบอร์โทร / Phone', 'รายการ / Items',
@@ -89,11 +96,18 @@ function handleOrder(order) {
 
   const name = String(order.name || '').trim().slice(0, 50);
   const phone = String(order.phone || '').replace(/\D/g, '');
-  const pickup = String(order.pickup || '').slice(0, 20);
   const note = String(order.note || '').trim().slice(0, 120);
 
   if (!name) return { ok: false, error: 'กรุณาใส่ชื่อ / Please enter your name' };
   if (phone.length < 9 || phone.length > 10) return { ok: false, error: 'เบอร์โทรไม่ถูกต้อง / Invalid phone number' };
+
+  // The page sends {type:'asap'} or {type:'later', date:'2026-11-28', time:'07:30'}.
+  // We check it against the shop's hours ourselves and write the text ourselves,
+  // so nothing the customer's browser sends is shown to the shop as it is.
+  const now = bangkokNow();
+  const when = resolvePickup(order.pickup, now.today, now.minutes);
+  if (!when.ok) return when;
+  const pickup = when.text;
 
   // Rebuild the item list from MENU so prices can't be faked.
   const lines = [];
@@ -136,7 +150,71 @@ function handleOrder(order) {
     `\n\nตอบ / Reply "รับ ${id}" หรือ / or "accept ${id}"`
   );
 
-  return { ok: true, id: id, total: total };
+  return { ok: true, id: id, total: total, pickup: pickup };
+}
+
+
+// ========== Pickup time ==========
+const TH_DAYS = ['อา.', 'จ.', 'อ.', 'พ.', 'พฤ.', 'ศ.', 'ส.'];
+const EN_DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+const TH_MONTHS = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
+const EN_MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+// Today's date and minutes since midnight, in Bangkok time (the server's own clock zone doesn't matter).
+function bangkokNow() {
+  const now = new Date();
+  const [h, m] = Utilities.formatDate(now, TZ, 'HH:mm').split(':').map(Number);
+  return { today: Utilities.formatDate(now, TZ, 'yyyy-MM-dd'), minutes: h * 60 + m };
+}
+
+function hhmm(minutes) {
+  return String(Math.floor(minutes / 60)).padStart(2, '0') + ':' + String(minutes % 60).padStart(2, '0');
+}
+
+// "2026-11-28" → a UTC Date at midnight, or null if it isn't a real date.
+// UTC is only used here to count days and find the weekday, so Bangkok vs server time can't shift it.
+function parseDay(text) {
+  const m = String(text || '').match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!m) return null;
+  const d = new Date(Date.UTC(+m[1], +m[2] - 1, +m[3]));
+  return d.getUTCMonth() === +m[2] - 1 && d.getUTCDate() === +m[3] ? d : null;
+}
+
+// Pure function (no Google services), so it can be tested outside Apps Script.
+// today = 'yyyy-MM-dd' in Bangkok, nowMin = minutes since midnight in Bangkok.
+// Returns { ok: true, text } with the text for LINE and the sheet, or { ok: false, error }.
+function resolvePickup(pickup, today, nowMin) {
+  const open = OPEN_HOUR * 60, close = CLOSE_HOUR * 60;
+  const bad = { ok: false, error: 'เวลารับไม่ถูกต้อง รีเฟรชหน้าแล้วลองใหม่ / Invalid pickup time, please refresh and try again' };
+  if (!pickup || typeof pickup !== 'object') return bad;
+
+  if (pickup.type === 'asap') {
+    if (nowMin < open || nowMin + PREP_MIN > close) {
+      return { ok: false, error: `ร้านปิดแล้ว เลือก "สั่งล่วงหน้า" / Shop is closed, please choose "Order for later"` };
+    }
+    return { ok: true, text: `รับเลย / ASAP ~${hhmm(nowMin + PREP_MIN)}` };
+  }
+
+  if (pickup.type === 'later') {
+    const day = parseDay(pickup.date);
+    const t = String(pickup.time || '').match(/^(\d{2}):(\d{2})$/);
+    if (!day || !t) return bad;
+    const mins = +t[1] * 60 + +t[2];
+    if (+t[2] > 59 || mins % SLOT_MIN !== 0 || mins < open || mins > close) {
+      return { ok: false, error: `ร้านเปิด ${hhmm(open)}–${hhmm(close)} / Open ${hhmm(open)}–${hhmm(close)}` };
+    }
+    const daysAway = Math.round((day - parseDay(today)) / 86400000);
+    if (daysAway < 0 || daysAway > DAYS_AHEAD) {
+      return { ok: false, error: `สั่งล่วงหน้าได้ไม่เกิน ${DAYS_AHEAD} วัน / Up to ${DAYS_AHEAD} days ahead only` };
+    }
+    if (daysAway === 0 && mins < nowMin + PREP_MIN) {
+      return { ok: false, error: 'เวลานี้ผ่านไปแล้ว เลือกเวลาใหม่ / That time has passed, please pick another' };
+    }
+    const wd = day.getUTCDay(), d = day.getUTCDate(), mo = day.getUTCMonth();
+    return { ok: true, text: `${TH_DAYS[wd]} ${d} ${TH_MONTHS[mo]} / ${EN_DAYS[wd]} ${d} ${EN_MONTHS[mo]} ${hhmm(mins)}` };
+  }
+
+  return bad;
 }
 
 
