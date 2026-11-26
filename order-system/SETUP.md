@@ -71,7 +71,7 @@ Two big buttons, **ออเดอร์ / Orders** and **สรุปวัน�
 1. Make sure `richmenu.png` is online (it is in this repo, so GitHub Pages serves it a minute after a push).
 2. In Apps Script pick `setupRichMenu` and press **Run** once. It uploads the menu and gives it to every registered owner. You don't need to redeploy for this.
 3. New owners who register later get the bar automatically.
-4. To take it away: run `removeRichMenu`. Running `setupRichMenu` again replaces the menu, it doesn't pile up copies.
+4. To take it away: set `SHORTCUTS` to `'chips'` or `'none'`, redeploy and run `setupRichMenu` (or just run `removeRichMenu`). Running `setupRichMenu` again replaces the menu, it doesn't pile up copies.
 5. To change colours or words: edit `richmenu-source.html`, screenshot it at exactly 2500 x 843, replace `richmenu.png`, push, run `setupRichMenu`.
 
 If Run shows "Could not download the menu image", GitHub Pages isn't updated yet: wait a minute and run again. The shop's own menus made in LINE OA Manager are never touched.
@@ -100,8 +100,7 @@ Everything a shop might want to change is at the top of `Code.gs` (section 1) an
 | Page colour | `index.html` | `--brand` in the CSS |
 | Skip the "Accepted" step (New → Ready → Picked up) | `Code.gs` | `USE_ACCEPT_STEP = false` |
 | Instant tap message `✓ รับ #3` | `Code.gs` | `TAP_ECHO` |
-| Bottom bar (📋 Orders, 📊 Summary) | `Code.gs` | run `setupRichMenu` (on) or `removeRichMenu` (off) |
-| Chips under every message (off by default, they float over the last message) | `Code.gs` | `QUICK_REPLIES` |
+| Shortcuts to Orders and Summary: `'bar'` (permanent bottom bar), `'chips'` (floating buttons that cover the last message), `'both'` or `'none'` | `Code.gs` | `SHORTCUTS`. After changing it: redeploy, then run `setupRichMenu` once (it adds or removes the bar to match) |
 | Rows on the board | `Code.gs` | `BOARD_MAX` |
 
 After changing `Code.gs`, redeploy (see the limits below). After changing `index.html`, push and regenerate `live.html`.

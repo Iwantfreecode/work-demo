@@ -39,7 +39,13 @@ const SLOT_MIN = 15;              // later pickups are every 15 minutes
 const BRAND_COLOR = '#24392D';    // card and button colour (the order page has its own --brand in its CSS)
 const USE_ACCEPT_STEP = true;     // false = skip "Accepted": New → Ready → Picked up (good for small shops)
 const TAP_ECHO = true;            // a button tap shows "✓ รับ #3" in the chat at once, before the answer arrives
-const QUICK_REPLIES = false;      // 📋 / 📊 chips under every message. Off: the Rich menu does this job and the chips float over the last message
+// Shortcuts to 📋 Orders and 📊 Summary for the owner. Pick one:
+//   'bar'   = permanent bar at the bottom of the chat (Rich menu). Never covers a message.
+//   'chips' = floating buttons under each message (they cover the bottom of the last message)
+//   'both'  or 'none'
+// After changing it: redeploy, then run setupRichMenu once. It adds or removes the bar to match this choice.
+const SHORTCUTS = 'bar';
+const QUICK_REPLIES = SHORTCUTS === 'chips' || SHORTCUTS === 'both';
 const BOARD_MAX = 10;             // rows shown on the order board
 
 // Rich menu: a permanent bar (📋 Orders, 📊 Summary) at the bottom of the owner's chat. Set up once with setupRichMenu.
@@ -374,8 +380,16 @@ function setupDailySummary() {
 // ========== Rich menu (permanent bottom bar for owners) ==========
 // Only owners get it: it is linked to each owner one by one, so customers chatting with the shop never see it.
 // Run setupRichMenu once from the editor, after richmenu.png is online. Run it again to replace the menu.
+// (It follows the SHORTCUTS setting: with 'chips' or 'none' it removes the bar instead.)
 // Run removeRichMenu to take it away.
 function setupRichMenu() {
+  if (!['bar', 'chips', 'both', 'none'].includes(SHORTCUTS)) throw new Error('SHORTCUTS must be bar, chips, both or none (it is "' + SHORTCUTS + '")');
+  if (SHORTCUTS === 'chips' || SHORTCUTS === 'none') {
+    removeRichMenu();                               // make the chat match the choice: no bar
+    console.log('SHORTCUTS is "' + SHORTCUTS + '": no bottom bar. Removed it if it was there.');
+    return;
+  }
+
   // Download the image first, so a missing image fails before anything is changed.
   const image = UrlFetchApp.fetch(RICH_MENU_IMAGE_URL, { muteHttpExceptions: true });
   if (image.getResponseCode() !== 200) {
