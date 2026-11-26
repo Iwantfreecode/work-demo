@@ -35,11 +35,19 @@ const PREP_MIN = 15;              // minutes the shop needs to make an order
 const DAYS_AHEAD = 7;             // "order for later" up to 7 days ahead
 const SLOT_MIN = 15;              // later pickups are every 15 minutes
 
+// How the LINE side looks and behaves
+const BRAND_COLOR = '#24392D';    // card and button colour (the order page has its own --brand in its CSS)
+const USE_ACCEPT_STEP = true;     // false = skip "Accepted": New → Ready → Picked up (good for small shops)
+const TAP_ECHO = true;            // a button tap shows "✓ รับ #3" in the chat at once, before the answer arrives
+const QUICK_REPLIES = true;       // 📋 Orders / 📊 Summary shortcut chips under every message
+const BOARD_MAX = 10;             // rows shown on the order board
+
 // ---------- 2. Sheet layout ----------
 const SHEET_NAME = 'Orders';
 const HEADERS = ['เลขที่ / No.', 'เวลาสั่ง / Time', 'ชื่อ / Name', 'เบอร์โทร / Phone', 'รายการ / Items',
-                 'ยอดรวม / Total', 'เวลารับ / Pickup', 'หมายเหตุ / Note', 'สถานะ / Status', 'การชำระเงิน / Payment'];
-const COL = { id: 1, time: 2, name: 3, phone: 4, items: 5, total: 6, pickup: 7, note: 8, status: 9, payment: 10 };
+                 'ยอดรวม / Total', 'เวลารับ / Pickup', 'หมายเหตุ / Note', 'สถานะ / Status', 'การชำระเงิน / Payment',
+                 'เวลารับ (ใช้เรียงลำดับ) / Pickup sort key'];
+const COL = { id: 1, time: 2, name: 3, phone: 4, items: 5, total: 6, pickup: 7, note: 8, status: 9, payment: 10, pickupAt: 11 };
 
 const STATUS = {
   new:       'ใหม่ / New',
@@ -75,7 +83,11 @@ const COMMANDS = {
   'ยกเลิก': 'cancel',    'cancel': 'cancel',
 };
 
-const BRAND_COLOR = '#24392D';    // button card colour (same green as the order page)
+// Words that open the order board
+const BOARD_WORDS = ['ออเดอร์', 'orders', 'board'];
+
+// Messages starting with this are the "echo" of a button tap. We ignore them, the postback does the work.
+const ECHO_MARK = '✓';
 
 const HELP_TEXT =
   'คำสั่ง / Commands (หรือกดปุ่มในออเดอร์ / or tap the buttons)\n' +
@@ -83,6 +95,7 @@ const HELP_TEXT =
   'เสร็จ 12 / ready 12 = พร้อมให้รับ / ready for pickup\n' +
   'รับแล้ว 12 / picked 12 = ลูกค้ารับแล้ว จ่ายแล้ว / picked up and paid\n' +
   'ยกเลิก 12 / cancel 12 = ยกเลิก / cancel\n' +
+  'ออเดอร์ / orders = รายการที่ค้าง / active orders\n' +
   'สรุป / summary = ยอดวันนี้ / today\'s sales';
 
 const props = PropertiesService.getScriptProperties();
@@ -158,7 +171,7 @@ function handleOrder(order) {
     // A saved counter, not the row count, so deleting a row never repeats a number.
     id = Number(props.getProperty('LAST_ID') || 0) + 1;
     props.setProperty('LAST_ID', String(id));
-    sheet.appendRow([id, new Date(), name, "'" + phone, lines.join('\n'), total, pickup, note, STATUS.new, PAY.atPickup]);
+    sheet.appendRow([id, new Date(), name, "'" + phone, lines.join('\n'), total, pickup, note, STATUS.new, PAY.atPickup, when.at]);
   } finally {
     lock.releaseLock();
   }
@@ -198,7 +211,7 @@ function parseDay(text) {
 
 // Pure function (no Google services), so it can be tested outside Apps Script.
 // today = 'yyyy-MM-dd' in Bangkok, nowMin = minutes since midnight in Bangkok.
-// Returns { ok: true, text } with the text for LINE and the sheet, or { ok: false, error }.
+// Returns { ok: true, text, at } with the text for LINE and the sheet (at = 'yyyy-MM-dd HH:mm', used to sort the board), or { ok: false, error }.
 function resolvePickup(pickup, today, nowMin) {
   const open = OPEN_HOUR * 60, close = CLOSE_HOUR * 60;
   const bad = { ok: false, error: 'เวลารับไม่ถูกต้อง รีเฟรชหน้าแล้วลองใหม่ / Invalid pickup time, please refresh and try again' };
@@ -208,7 +221,7 @@ function resolvePickup(pickup, today, nowMin) {
     if (nowMin < open || nowMin + PREP_MIN > close) {
       return { ok: false, error: `ร้านปิดแล้ว เลือก "สั่งล่วงหน้า" / Shop is closed, please choose "Order for later"` };
     }
-    return { ok: true, text: `รับเลย / ASAP ~${hhmm(nowMin + PREP_MIN)}` };
+    return { ok: true, text: `รับเลย / ASAP ~${hhmm(nowMin + PREP_MIN)}`, at: `${today} ${hhmm(nowMin + PREP_MIN)}` };
   }
 
   if (pickup.type === 'later') {
@@ -227,7 +240,8 @@ function resolvePickup(pickup, today, nowMin) {
       return { ok: false, error: 'เวลานี้ผ่านไปแล้ว เลือกเวลาใหม่ / That time has passed, please pick another' };
     }
     const wd = day.getUTCDay(), d = day.getUTCDate(), mo = day.getUTCMonth();
-    return { ok: true, text: `${TH_DAYS[wd]} ${d} ${TH_MONTHS[mo]} / ${EN_DAYS[wd]} ${d} ${EN_MONTHS[mo]} ${hhmm(mins)}` };
+    return { ok: true, at: `${pickup.date} ${hhmm(mins)}`,
+             text: `${TH_DAYS[wd]} ${d} ${TH_MONTHS[mo]} / ${EN_DAYS[wd]} ${d} ${EN_MONTHS[mo]} ${hhmm(mins)}` };
   }
 
   return bad;
@@ -241,6 +255,7 @@ function handleLineEvent(ev) {
   if (ev.type !== 'message' || ev.message.type !== 'text') return;
 
   const text = ev.message.text.trim();
+  if (text.startsWith(ECHO_MARK)) return;            // echo of a button tap, already handled as a postback
   const userId = ev.source.userId;
   const admins = getAdmins();
 
@@ -256,22 +271,30 @@ function handleLineEvent(ev) {
   const action = cmd && COMMANDS[cmd[1].toLowerCase()];
   if (action) return runAction(ev.replyToken, action, Number(cmd[2]));
 
+  if (BOARD_WORDS.includes(text.toLowerCase())) return replyBoard(ev.replyToken, '');
   if (text === 'สรุป' || text.toLowerCase() === 'summary') return reply(ev.replyToken, buildSummary());
 
   return reply(ev.replyToken, HELP_TEXT);
 }
 
 
-// Button data looks like "accept:12". Only registered owners can use the buttons.
+// Button data looks like "accept:12" (or "accept:12:b" from the board). Only registered owners can use the buttons.
 function handlePostback(ev) {
   if (!getAdmins().includes(ev.source.userId)) return;
-  const m = String(ev.postback.data).match(/^(accept|ready|picked|cancel):(\d+)$/);
-  if (m) runAction(ev.replyToken, m[1], Number(m[2]));
+  const m = String(ev.postback.data).match(/^(accept|ready|picked|cancel|view):(\d+)(:b)?$/);   // ":b" = tapped on the board
+  if (!m) return;
+  const id = Number(m[2]);
+  if (m[1] === 'view') {
+    const found = findOrder(id);
+    return found ? replyCard(ev.replyToken, found.order) : reply(ev.replyToken, `ไม่พบออเดอร์ / Order not found #${id}`);
+  }
+  runAction(ev.replyToken, m[1], id, Boolean(m[3]));
 }
 
-// Same path for typed commands and button taps: change the order, then answer with the new card.
-function runAction(replyToken, action, id) {
+// Same path for typed commands and button taps: change the order, then answer with the new card (or the refreshed board).
+function runAction(replyToken, action, id, fromBoard) {
   const result = applyAction(action, id);
+  if (fromBoard) return replyBoard(replyToken, result.order ? '' : result.text);     // the board refreshes after every tap
   if (!result.order) return reply(replyToken, result.text);
   replyCard(replyToken, result.order);
 }
@@ -352,33 +375,47 @@ function getSheet() {
     sheet.setFrozenRows(1);
     sheet.getRange(1, 1, 1, HEADERS.length).setFontWeight('bold');
   }
-  // Sheets made before the Payment column existed get its header added once.
-  if (!sheet.getRange(1, COL.payment).getValue()) {
-    sheet.getRange(1, COL.payment).setValue(HEADERS[COL.payment - 1]).setFontWeight('bold');
+  // Sheets made before the Payment / sort-key columns existed get those headers added once.
+  // Checked at most every 6 hours, so a button tap doesn't spend time on it.
+  const cache = CacheService.getScriptCache();
+  if (!cache.get('headers-ok')) {
+    [COL.payment, COL.pickupAt].forEach(c => {
+      if (!sheet.getRange(1, c).getValue()) sheet.getRange(1, c).setValue(HEADERS[c - 1]).setFontWeight('bold');
+    });
+    cache.put('headers-ok', '1', 21600);
   }
   return sheet;
 }
 
-// Find one order by its number. Returns { row, order } or null.
+// One sheet row → the order object the cards and the board use.
+function rowToOrder(r) {
+  return {
+    id: Number(r[COL.id - 1]),
+    time: r[COL.time - 1],
+    name: String(r[COL.name - 1]),
+    phone: String(r[COL.phone - 1]),
+    items: String(r[COL.items - 1]).split('\n'),
+    total: r[COL.total - 1],
+    pickup: String(r[COL.pickup - 1]),
+    note: String(r[COL.note - 1]),
+    status: r[COL.status - 1],
+    payment: r[COL.payment - 1] || PAY.atPickup,       // rows from before the Payment column
+    at: String(r[COL.pickupAt - 1] || ''),             // 'yyyy-MM-dd HH:mm', empty on old rows
+  };
+}
+
+// Find one order by its number (reads only that row). Returns { row, order } or null.
 function findOrder(id) {
   const sheet = getSheet();
-  const values = sheet.getDataRange().getValues();
-  for (let i = 1; i < values.length; i++) {
-    const r = values[i];
-    if (Number(r[COL.id - 1]) !== id) continue;
-    return { row: i + 1, order: {
-      id: id,
-      name: String(r[COL.name - 1]),
-      phone: String(r[COL.phone - 1]),
-      items: String(r[COL.items - 1]).split('\n'),
-      total: r[COL.total - 1],
-      pickup: String(r[COL.pickup - 1]),
-      note: String(r[COL.note - 1]),
-      status: r[COL.status - 1],
-      payment: r[COL.payment - 1] || PAY.atPickup,     // rows from before the Payment column
-    } };
+  const last = sheet.getLastRow();
+  if (last < 2) return null;
+  const ids = sheet.getRange(2, COL.id, last - 1, 1).getValues();       // only the number column
+  let row = 0;
+  for (let i = ids.length - 1; i >= 0; i--) {
+    if (Number(ids[i][0]) === id) { row = i + 2; break; }
   }
-  return null;
+  if (!row) return null;
+  return { row: row, order: rowToOrder(sheet.getRange(row, 1, 1, COL.pickupAt).getValues()[0]) };
 }
 
 // Move an order to its next status. Returns { order } on success or { text } with the reason.
@@ -408,6 +445,79 @@ function applyAction(action, id) {
   } finally {
     lock.releaseLock();
   }
+}
+
+
+// ========== The order board (all active orders in one list) ==========
+// For a busy shop: one list, soonest pickup first, one tap per order. It refreshes after every tap,
+// so the owner never has to scroll back through old cards.
+function activeOrders() {
+  const sheet = getSheet();
+  const last = sheet.getLastRow();
+  if (last < 2) return [];
+  const first = Math.max(2, last - 199);                    // the newest 200 rows are plenty
+  const key = o => o.at || (o.time instanceof Date ? Utilities.formatDate(o.time, TZ, 'yyyy-MM-dd HH:mm') : '');
+  return sheet.getRange(first, 1, last - first + 1, COL.pickupAt).getValues()
+    .filter(r => RANK[r[COL.status - 1]] !== undefined && RANK[r[COL.status - 1]] < RANK[STATUS.picked])
+    .map(rowToOrder)
+    .sort((a, b) => key(a) < key(b) ? -1 : key(a) > key(b) ? 1 : a.id - b.id);
+}
+
+// "07:00" for today, "2/12 14:45" for another day
+function shortPickup(o, today) {
+  if (!o.at) return '-';
+  return o.at.slice(0, 10) === today ? o.at.slice(11) : `${+o.at.slice(8, 10)}/${+o.at.slice(5, 7)} ${o.at.slice(11)}`;
+}
+
+function boardMessage(orders) {
+  const today = Utilities.formatDate(new Date(), TZ, 'yyyy-MM-dd');
+  const text = (t, extra) => Object.assign({ type: 'text', text: String(t), size: 'md', color: '#222222' }, extra);
+
+  const counts = [[STATUS.new, 'ใหม่', 'New'], [STATUS.accepted, 'ยืนยันแล้ว', 'Accepted'], [STATUS.ready, 'พร้อมรับ', 'Ready']]
+    .map(([st, th, en]) => ({ n: orders.filter(o => o.status === st).length, th: th, en: en })).filter(c => c.n > 0);
+
+  const rows = orders.slice(0, BOARD_MAX).map(o => {
+    const step = nextStep(o.status);
+    const cups = o.items.reduce((sum, l) => sum + Number((l.match(/x(\d+)$/) || [0, 1])[1]), 0);
+    const name = o.name.length > 12 ? o.name.slice(0, 11) + '…' : o.name;
+    return { type: 'box', layout: 'horizontal', spacing: '12px', alignItems: 'center', contents: [
+      // tapping the left side opens the full card
+      { type: 'box', layout: 'vertical', flex: 1, spacing: '4px', justifyContent: 'center',
+        action: tapAction('ดู / View', `view:${o.id}`, `${ECHO_MARK} ดู #${o.id}`), contents: [
+          text(`#${o.id}  ${name}`, { weight: 'bold', wrap: false }),
+          text(`${shortPickup(o, today)} · ${cups} แก้ว · ฿${o.total}`, { size: 'sm', color: '#707070', wrap: false }) ] },
+      { type: 'box', layout: 'vertical', width: '96px', height: '48px', justifyContent: 'center', alignItems: 'center',
+        cornerRadius: '8px', backgroundColor: BRAND_COLOR,
+        action: tapAction(`${step.th} / ${step.en}`, `${step.action}:${o.id}:b`, `${ECHO_MARK} ${step.th} #${o.id}`),
+        contents: [ text(step.th, { weight: 'bold', color: '#FFFFFF', align: 'center' }),
+                    text(step.en, { size: 'sm', color: '#DCE5DF', align: 'center' }) ] },
+    ] };
+  });
+
+  const body = [];
+  rows.forEach((row, i) => { if (i) body.push({ type: 'separator' }); body.push(row); });
+  if (!rows.length) body.push(text('ไม่มีออเดอร์ค้าง / Nothing pending ✓', { weight: 'bold' }));
+  if (orders.length > BOARD_MAX) {
+    body.push(text(`อีก ${orders.length - BOARD_MAX} ออเดอร์ ทำรายการข้างบนก่อน / ${orders.length - BOARD_MAX} more, finish the top ones first`,
+                   { size: 'sm', color: '#707070', wrap: true }));
+  }
+
+  const header = [ text('ออเดอร์ที่ค้าง / Active orders', { size: 'lg', weight: 'bold', color: '#FFFFFF' }) ];
+  if (counts.length) {
+    header.push(text(counts.map(c => `${c.th} ${c.n}`).join(' · '), { size: 'sm', color: '#DCE5DF' }));
+    header.push(text(counts.map(c => `${c.en} ${c.n}`).join(' · '), { size: 'sm', color: '#DCE5DF' }));
+  }
+  return { type: 'flex', altText: `📋 ออเดอร์ที่ค้าง / Active orders: ${orders.length}`, contents: { type: 'bubble',
+    header: { type: 'box', layout: 'vertical', backgroundColor: BRAND_COLOR, paddingAll: '16px', spacing: '4px', contents: header },
+    body: { type: 'box', layout: 'vertical', paddingAll: '16px', spacing: '12px', contents: body } } };
+}
+
+// Plain text version of the board, if LINE ever refuses the card.
+function boardText(orders) {
+  const today = Utilities.formatDate(new Date(), TZ, 'yyyy-MM-dd');
+  if (!orders.length) return 'ไม่มีออเดอร์ค้าง / Nothing pending ✓';
+  return '📋 ออเดอร์ที่ค้าง / Active orders\n' +
+    orders.slice(0, BOARD_MAX).map(o => `#${o.id} ${o.name} · ${shortPickup(o, today)} · ฿${o.total} · ${o.status}`).join('\n');
 }
 
 
@@ -454,19 +564,37 @@ function orderCard(o) {
   return { type: 'flex', altText: orderText(o).slice(0, 400), contents: bubble };     // altText = the lock-screen preview
 }
 
+// The one next step for an order, or null when it is finished. Small shops can skip "Accepted" (USE_ACCEPT_STEP).
+function nextStep(status) {
+  const accept = { action: 'accept', th: 'รับ', en: 'Accept' };
+  const ready = { action: 'ready', th: 'พร้อมรับ', en: 'Ready' };
+  const picked = { action: 'picked', th: 'รับแล้ว', en: 'Picked up' };
+  if (status === STATUS.new) return USE_ACCEPT_STEP ? accept : ready;
+  if (status === STATUS.accepted) return ready;
+  if (status === STATUS.ready) return picked;
+  return null;
+}
+
+// A postback = a button tap LINE sends to our webhook. displayText makes the tap show up in the chat at once.
+function tapAction(label, data, echo) {
+  const action = { type: 'postback', label: label, data: data };
+  if (TAP_ECHO) action.displayText = echo;
+  return action;
+}
+
 // One big main button for the next step, one quiet Cancel. Nothing after Picked up / Cancelled.
 function cardButtons(o) {
-  const next = { [STATUS.new]: ['accept', 'รับ / Accept'], [STATUS.accepted]: ['ready', 'พร้อมรับ / Ready'],
-                 [STATUS.ready]: ['picked', 'รับแล้ว / Picked up'] }[o.status];
-  if (!next) return [];
-  return [ cardButton(next[1], `${next[0]}:${o.id}`, true), cardButton('ยกเลิก / Cancel', `cancel:${o.id}`, false) ];
+  const step = nextStep(o.status);
+  if (!step) return [];
+  return [ cardButton(`${step.th} / ${step.en}`, `${step.action}:${o.id}`, true, `${ECHO_MARK} ${step.th} #${o.id}`),
+           cardButton('ยกเลิก / Cancel', `cancel:${o.id}`, false, `${ECHO_MARK} ยกเลิก #${o.id}`) ];
 }
 
 // A tappable box (48px tall, easy to hit) instead of LINE's thinner standard button.
-function cardButton(label, data, primary) {
+function cardButton(label, data, primary, echo) {
   const box = {
     type: 'box', layout: 'vertical', height: '48px', justifyContent: 'center', alignItems: 'center', cornerRadius: '8px',
-    action: { type: 'postback', label: label, data: data },
+    action: tapAction(label, data, echo),
     contents: [{ type: 'text', text: label, size: 'md', weight: primary ? 'bold' : 'regular', color: primary ? '#FFFFFF' : '#555555' }],
   };
   if (primary) box.backgroundColor = BRAND_COLOR;
@@ -495,16 +623,34 @@ function pushOrderCard(o) {
 }
 
 // Reply = answering the owner's message. Free, doesn't use the quota.
-function reply(replyToken, text) {
-  lineApi('reply', { replyToken: replyToken, messages: [{ type: 'text', text: text }] });
+function reply(replyToken, messages) {
+  const list = typeof messages === 'string' ? [{ type: 'text', text: messages }] : messages;
+  lineApi('reply', { replyToken: replyToken, messages: list });
+}
+
+// Answer with the board (and a short text first when something was refused).
+function replyBoard(replyToken, note) {
+  const orders = activeOrders();
+  const messages = note ? [{ type: 'text', text: note }] : [];
+  messages.push(boardMessage(orders));
+  if (!lineApi('reply', { replyToken: replyToken, messages: messages })) {
+    reply(replyToken, [note, boardText(orders)].filter(Boolean).join('\n\n'));
+  }
 }
 
 function replyCard(replyToken, o) {
   if (!lineApi('reply', { replyToken: replyToken, messages: [orderCard(o)] })) reply(replyToken, `#${o.id} → ${o.status} ✓`);
 }
 
+// Shortcut chips LINE shows under the last message
+const CHIPS = { items: [
+  { type: 'action', action: { type: 'message', label: '📋 ออเดอร์ / Orders', text: 'ออเดอร์' } },
+  { type: 'action', action: { type: 'message', label: '📊 สรุป / Summary', text: 'สรุป' } },
+] };
+
 // Returns true when LINE accepted the message.
 function lineApi(kind, payload) {
+  if (QUICK_REPLIES) payload.messages[payload.messages.length - 1].quickReply = CHIPS;
   const res = UrlFetchApp.fetch('https://api.line.me/v2/bot/message/' + kind, {
     method: 'post',
     contentType: 'application/json',

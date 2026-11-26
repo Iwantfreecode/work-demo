@@ -58,15 +58,41 @@ Every new order arrives as a card with a big button for the next step:
 - An order only moves forward. Tapping an old button again says "Can't do that now" and changes nothing.
 - **Picked up** marks the order paid (everyone pays at the shop for now). Daily sales count only picked-up orders.
 - If LINE ever refuses the card, the shop gets the same order as plain text with the typed command to reply.
-- The sheet has a **Payment** column. Old sheets get its header added automatically.
+- The sheet has a **Payment** column and a **Pickup sort key** column (used to sort the board). Old sheets get both headers added automatically.
+
+## The order board (for a busy shop)
+Tap the **📋 ออเดอร์ / Orders** chip under any message (or type `ออเดอร์` / `orders`). You get one list of every active order, soonest pickup first, with one button per order for its next step. The list refreshes after every tap. Tap the left side of a row to open the full card. Done and cancelled orders drop off. It shows 10 rows, then "N more".
+
+Each tap also shows a short message like `✓ รับ #3` in the chat straight away, so the tap feels instant while the script answers. The script ignores those messages.
 
 ## Typed commands (owner only, Thai or English, same result as the buttons)
 - `รับ 12` / `accept 12`: accept order 12
 - `เสร็จ 12` / `ready 12`: drink ready
 - `รับแล้ว 12` / `picked 12`: customer picked up and paid
 - `ยกเลิก 12` / `cancel 12`: cancel
+- `ออเดอร์` / `orders`: the order board
 - `สรุป` / `summary`: today's sales and orders still pending
 - `ลงทะเบียน <code>` / `register <code>`: become an owner (once)
+
+## Customize for each shop
+Everything a shop might want to change is at the top of `Code.gs` (section 1) and the top of the script in `index.html`. Change the same numbers in both files.
+
+| What | Where | Setting |
+|---|---|---|
+| Menu and prices | both files | `MENU` |
+| Shop name | `Code.gs` | `SHOP_NAME` |
+| Opening hours, last pickup | both | `OPEN_HOUR` / `CLOSE_HOUR` (page: `OPEN` / `CLOSE`) |
+| Prep time for ASAP | both | `PREP_MIN` (page: `PREP`) |
+| Days ahead, slot size | both | `DAYS_AHEAD`, `SLOT_MIN` (page: `SLOT`) |
+| Daily summary time | `Code.gs` | `SUMMARY_HOUR`, then run `setupDailySummary` again |
+| Card and button colour | `Code.gs` | `BRAND_COLOR` |
+| Page colour | `index.html` | `--brand` in the CSS |
+| Skip the "Accepted" step (New → Ready → Picked up) | `Code.gs` | `USE_ACCEPT_STEP = false` |
+| Instant tap message `✓ รับ #3` | `Code.gs` | `TAP_ECHO` |
+| 📋 / 📊 shortcut chips | `Code.gs` | `QUICK_REPLIES` |
+| Rows on the board | `Code.gs` | `BOARD_MAX` |
+
+After changing `Code.gs`, redeploy (see the limits below). After changing `index.html`, push and regenerate `live.html`.
 
 ## Owner security
 - The REGISTER_CODE works **once**. After someone registers, the script deletes it.
