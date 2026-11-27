@@ -38,6 +38,11 @@ const SLOT_MIN = 15;              // later pickups are every 15 minutes
 // How the LINE side looks and behaves
 const BRAND_COLOR = '#24392D';    // card and button colour (the order page has its own --brand in its CSS)
 const USE_ACCEPT_STEP = true;     // false = skip "Accepted": New → Ready → Picked up (good for small shops)
+// "Order for later": the first alert only asks Accept / Cancel. A second alert comes LEAD_MIN minutes before pickup
+// (07:00 order → alert at 06:45), and Ready / Picked up stay locked until then.
+// It costs one extra LINE message per owner per later order. 0 = off: later orders alert once, like ASAP orders.
+// After changing it: redeploy, then run setupStartAlerts once.
+const LEAD_MIN = 15;
 const TAP_ECHO = true;            // a button tap shows "✓ รับ #3" in the chat at once, before the answer arrives
 // Shortcuts to 📋 Orders and 📊 Summary for the owner. Pick one:
 //   'bar'   = permanent bar at the bottom of the chat (Rich menu). Never covers a message.
@@ -56,8 +61,14 @@ const RICH_MENU_IMAGE_URL = 'https://iwantfreecode.github.io/work-demo/order-sys
 const SHEET_NAME = 'Orders';
 const HEADERS = ['เลขที่ / No.', 'เวลาสั่ง / Time', 'ชื่อ / Name', 'เบอร์โทร / Phone', 'รายการ / Items',
                  'ยอดรวม / Total', 'เวลารับ / Pickup', 'หมายเหตุ / Note', 'สถานะ / Status', 'การชำระเงิน / Payment',
-                 'เวลารับ (ใช้เรียงลำดับ) / Pickup sort key'];
-const COL = { id: 1, time: 2, name: 3, phone: 4, items: 5, total: 6, pickup: 7, note: 8, status: 9, payment: 10, pickupAt: 11 };
+                 'เวลารับ (ใช้เรียงลำดับ) / Pickup sort key', 'แจ้งเตือนเริ่มทำ (ระบบใช้) / Start alert (system)'];
+const COL = { id: 1, time: 2, name: 3, phone: 4, items: 5, total: 6, pickup: 7, note: 8, status: 9, payment: 10, pickupAt: 11, alert: 12 };
+
+// Last column: where a later order is in the two-alert flow. Empty = not a later order (or an old row).
+const ALERT = {
+  later: 'later',                  // waiting for its start time
+  sent:  'sent',                   // start alert done
+};
 
 const STATUS = {
   new:       'ใหม่ / New',
@@ -173,6 +184,11 @@ function handleOrder(order) {
   if (cache.get('recent-' + phone)) return { ok: false, error: 'เพิ่งสั่งไป รอสักครู่ / Just ordered, please wait a moment' };
   cache.put('recent-' + phone, '1', 30);
 
+  // Later orders get two alerts: now (Accept / Cancel) and again LEAD_MIN minutes before pickup.
+  // If the start time has already passed (ordering 10 minutes before a later slot), the first alert is the full one.
+  let alert = '';
+  if (LEAD_MIN > 0 && when.kind === 'later') alert = minusMinutes(when.at, LEAD_MIN) > now.key ? ALERT.later : ALERT.sent;
+
   // The lock makes sure two orders at the same moment don't get the same number.
   const lock = LockService.getScriptLock();
   lock.waitLock(10000);
@@ -182,13 +198,13 @@ function handleOrder(order) {
     // A saved counter, not the row count, so deleting a row never repeats a number.
     id = Number(props.getProperty('LAST_ID') || 0) + 1;
     props.setProperty('LAST_ID', String(id));
-    sheet.appendRow([id, new Date(), name, "'" + phone, lines.join('\n'), total, pickup, note, STATUS.new, PAY.atPickup, "'" + when.at]);
+    sheet.appendRow([id, new Date(), name, "'" + phone, lines.join('\n'), total, pickup, note, STATUS.new, PAY.atPickup, "'" + when.at, alert]);
   } finally {
     lock.releaseLock();
   }
 
   pushOrderCard({ id: id, name: name, phone: phone, items: lines, total: total, pickup: pickup, note: note,
-                  status: STATUS.new, payment: PAY.atPickup });
+                  status: STATUS.new, payment: PAY.atPickup, at: when.at, alert: alert });
 
   return { ok: true, id: id, total: total, pickup: pickup };
 }
@@ -204,7 +220,21 @@ const EN_MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep'
 function bangkokNow() {
   const now = new Date();
   const [h, m] = Utilities.formatDate(now, TZ, 'HH:mm').split(':').map(Number);
-  return { today: Utilities.formatDate(now, TZ, 'yyyy-MM-dd'), minutes: h * 60 + m };
+  const today = Utilities.formatDate(now, TZ, 'yyyy-MM-dd');
+  // key = 'yyyy-MM-dd HH:mm', the same shape as the sort key in the sheet, so times compare as plain text
+  return { today: today, minutes: h * 60 + m, key: today + ' ' + hhmm(h * 60 + m) };
+}
+
+function nowKey() {
+  return bangkokNow().key;
+}
+
+// 'yyyy-MM-dd HH:mm' minus some minutes, same shape back. Counts on a plain calendar (UTC), so zones can't shift it.
+function minusMinutes(at, min) {
+  const m = String(at).match(/^(\d{4})-(\d{2})-(\d{2}) (\d{2}):(\d{2})$/);
+  if (!m) return '';
+  const iso = new Date(Date.UTC(+m[1], +m[2] - 1, +m[3], +m[4], +m[5]) - min * 60000).toISOString();
+  return iso.slice(0, 10) + ' ' + iso.slice(11, 16);
 }
 
 function hhmm(minutes) {
@@ -232,7 +262,7 @@ function resolvePickup(pickup, today, nowMin) {
     if (nowMin < open || nowMin + PREP_MIN > close) {
       return { ok: false, error: `ร้านปิดแล้ว เลือก "สั่งล่วงหน้า" / Shop is closed, please choose "Order for later"` };
     }
-    return { ok: true, text: `รับเลย / ASAP ~${hhmm(nowMin + PREP_MIN)}`, at: `${today} ${hhmm(nowMin + PREP_MIN)}` };
+    return { ok: true, kind: 'asap', text: `รับเลย / ASAP ~${hhmm(nowMin + PREP_MIN)}`, at: `${today} ${hhmm(nowMin + PREP_MIN)}` };
   }
 
   if (pickup.type === 'later') {
@@ -251,7 +281,7 @@ function resolvePickup(pickup, today, nowMin) {
       return { ok: false, error: 'เวลานี้ผ่านไปแล้ว เลือกเวลาใหม่ / That time has passed, please pick another' };
     }
     const wd = day.getUTCDay(), d = day.getUTCDate(), mo = day.getUTCMonth();
-    return { ok: true, at: `${pickup.date} ${hhmm(mins)}`,
+    return { ok: true, kind: 'later', at: `${pickup.date} ${hhmm(mins)}`,
              text: `${TH_DAYS[wd]} ${d} ${TH_MONTHS[mo]} / ${EN_DAYS[wd]} ${d} ${EN_MONTHS[mo]} ${hhmm(mins)}` };
   }
 
@@ -360,7 +390,22 @@ function buildSummary() {
     `ยอดขาย / Sales: ${sales.toLocaleString()} บาท (เฉพาะที่รับแล้ว / picked-up only)` +
     (pending.length
       ? `\nยังค้าง / Pending: ${pending.map(r => '#' + r[0]).join(' ')}`
-      : '\nไม่มีออเดอร์ค้าง / Nothing pending ✓');
+      : '\nไม่มีออเดอร์ค้าง / Nothing pending ✓') +
+    quotaLine();
+}
+
+// How much of LINE's monthly free message limit is used. Alerts count, replies don't. Empty if LINE doesn't answer
+// or the account has no limit.
+function quotaLine() {
+  try {
+    const limit = JSON.parse(lineCall('get', LINE_API + '/message/quota').text);
+    const used = JSON.parse(lineCall('get', LINE_API + '/message/quota/consumption').text);
+    if (limit.type !== 'limited' || typeof used.totalUsage !== 'number') return '';
+    const warn = used.totalUsage >= limit.value * 0.8 ? '  ⚠️ ใกล้เต็ม / almost full' : '';
+    return `\nข้อความ LINE เดือนนี้ / LINE messages this month: ${used.totalUsage}/${limit.value}${warn}`;
+  } catch (err) {
+    return '';
+  }
 }
 
 // Runs every day at SUMMARY_HOUR (set up once with setupDailySummary)
@@ -374,6 +419,48 @@ function setupDailySummary() {
     .filter(t => t.getHandlerFunction() === 'sendDailySummary')
     .forEach(t => ScriptApp.deleteTrigger(t));      // avoid duplicates if run twice
   ScriptApp.newTrigger('sendDailySummary').timeBased().atHour(SUMMARY_HOUR).everyDays(1).inTimezone(TZ).create();
+}
+
+
+// ========== Start alerts for "order for later" ==========
+// A timer runs sendStartAlerts every 5 minutes. For each later order whose start time (pickup minus LEAD_MIN) has come,
+// it sends the card again with the Ready button unlocked, then marks the row "sent" so it never repeats.
+// Apps Script timers are not exact: an alert can come a few minutes late, so keep LEAD_MIN at 10 or more.
+function sendStartAlerts() {
+  if (LEAD_MIN <= 0) return;
+  const now = bangkokNow();
+  if (now.minutes < OPEN_HOUR * 60 - LEAD_MIN || now.minutes > CLOSE_HOUR * 60) return;    // nothing can be due outside shop hours
+
+  // Same lock as button taps, so two timer runs (or a tap) can't send the same alert twice.
+  const lock = LockService.getScriptLock();
+  lock.waitLock(10000);
+  try {
+    const sheet = getSheet();
+    const last = sheet.getLastRow();
+    if (last < 2) return;
+    const first = Math.max(2, last - 199);
+    sheet.getRange(first, 1, last - first + 1, COL.alert).getValues().forEach((r, i) => {
+      if (r[COL.alert - 1] !== ALERT.later) return;
+      const o = rowToOrder(r);
+      if (isWaiting(o, now.key)) return;                                     // not time yet
+      const closed = o.status === STATUS.picked || o.status === STATUS.cancelled;
+      // If LINE refused every owner, leave the row as it is and try again in 5 minutes.
+      if (!closed && pushOrderCard(Object.assign({}, o, { startNow: true })) === 0) return;
+      sheet.getRange(first + i, COL.alert).setValue(ALERT.sent);
+    });
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+// Run this ONE time from the Apps Script editor (and again after changing LEAD_MIN).
+function setupStartAlerts() {
+  ScriptApp.getProjectTriggers()
+    .filter(t => t.getHandlerFunction() === 'sendStartAlerts')
+    .forEach(t => ScriptApp.deleteTrigger(t));
+  if (LEAD_MIN <= 0) { console.log('LEAD_MIN is 0: start alerts are off, timer removed.'); return; }
+  ScriptApp.newTrigger('sendStartAlerts').timeBased().everyMinutes(5).create();
+  console.log('Start alerts on: checking every 5 minutes, ' + LEAD_MIN + ' minutes before pickup.');
 }
 
 
@@ -441,14 +528,15 @@ function getSheet() {
     sheet.setFrozenRows(1);
     sheet.getRange(1, 1, 1, HEADERS.length).setFontWeight('bold');
   }
-  // Sheets made before the Payment / sort-key columns existed get those headers added once.
+  // Sheets made before the Payment / sort-key / start-alert columns existed get those headers added once.
   // Checked at most every 6 hours, so a button tap doesn't spend time on it.
   const cache = CacheService.getScriptCache();
-  if (!cache.get('headers-ok')) {
-    [COL.payment, COL.pickupAt].forEach(c => {
+  if (!cache.get('headers-ok-2')) {
+    if (sheet.getMaxColumns() < COL.alert) sheet.insertColumnsAfter(sheet.getMaxColumns(), COL.alert - sheet.getMaxColumns());
+    [COL.payment, COL.pickupAt, COL.alert].forEach(c => {
       if (!sheet.getRange(1, c).getValue()) sheet.getRange(1, c).setValue(HEADERS[c - 1]).setFontWeight('bold');
     });
-    cache.put('headers-ok', '1', 21600);
+    cache.put('headers-ok-2', '1', 21600);
   }
   return sheet;
 }
@@ -472,7 +560,26 @@ function rowToOrder(r) {
     status: r[COL.status - 1],
     payment: r[COL.payment - 1] || PAY.atPickup,       // rows from before the Payment column
     at: cellText(r[COL.pickupAt - 1]),                 // 'yyyy-MM-dd HH:mm', empty on old rows
+    alert: String(r[COL.alert - 1] || ''),             // '' / 'later' / 'sent', see ALERT
   };
+}
+
+// The moment a later order's start alert is due ('yyyy-MM-dd HH:mm'), or '' for orders without one.
+function startKey(o) {
+  return o.alert === ALERT.later ? minusMinutes(o.at, LEAD_MIN) : '';
+}
+
+// A later order that hasn't reached its start time yet: Ready and Picked up are locked.
+function isWaiting(o, key) {
+  const start = startKey(o);
+  return LEAD_MIN > 0 && start !== '' && start > key;
+}
+
+// The next step an order can take right now. null = nothing to tap (finished, or a later order that is still waiting;
+// a waiting order that isn't accepted yet can still be accepted).
+function stepFor(o, key) {
+  if (!isWaiting(o, key)) return nextStep(o.status);
+  return o.status === STATUS.new && USE_ACCEPT_STEP ? nextStep(o.status) : null;
 }
 
 // Find one order by its number (reads only that row). Returns { row, order } or null.
@@ -486,7 +593,7 @@ function findOrder(id) {
     if (Number(ids[i][0]) === id) { row = i + 2; break; }
   }
   if (!row) return null;
-  return { row: row, order: rowToOrder(sheet.getRange(row, 1, 1, COL.pickupAt).getValues()[0]) };
+  return { row: row, order: rowToOrder(sheet.getRange(row, 1, 1, COL.alert).getValues()[0]) };
 }
 
 // Move an order to its next status. Returns { order } on success or { text } with the reason.
@@ -503,6 +610,11 @@ function applyAction(action, id) {
     const backwards = action !== 'cancel' && RANK[target] <= RANK[order.status];
     if (closed || backwards) {
       return { text: `#${id} ตอนนี้ / now: ${order.status}\nทำรายการนี้ไม่ได้ / Can't do that now` };
+    }
+    // A later order can't be made Ready or Picked up before its start time (an old card might still show the button).
+    if ((action === 'ready' || action === 'picked') && isWaiting(order, nowKey())) {
+      const start = shortPickup({ at: startKey(order) }, bangkokNow().today);
+      return { text: `#${id} ยังไม่ถึงเวลาเริ่มทำ (${start}) / Too early, opens at ${start}` };
     }
 
     const sheet = getSheet();
@@ -528,7 +640,7 @@ function activeOrders() {
   if (last < 2) return [];
   const first = Math.max(2, last - 199);                    // the newest 200 rows are plenty
   const key = o => o.at || (o.time instanceof Date ? Utilities.formatDate(o.time, TZ, 'yyyy-MM-dd HH:mm') : '');
-  return sheet.getRange(first, 1, last - first + 1, COL.pickupAt).getValues()
+  return sheet.getRange(first, 1, last - first + 1, COL.alert).getValues()
     .filter(r => RANK[r[COL.status - 1]] !== undefined && RANK[r[COL.status - 1]] < RANK[STATUS.picked])
     .map(rowToOrder)
     .sort((a, b) => key(a) < key(b) ? -1 : key(a) > key(b) ? 1 : a.id - b.id);
@@ -545,29 +657,48 @@ function boardMessage(orders) {
   const now = Utilities.formatDate(new Date(), TZ, 'HH:mm');
   const text = (t, extra) => Object.assign({ type: 'text', text: String(t), size: 'md', color: '#222222' }, extra);
 
-  const counts = [[STATUS.new, 'ใหม่', 'New'], [STATUS.accepted, 'ยืนยันแล้ว', 'Accepted'], [STATUS.ready, 'พร้อมรับ', 'Ready']]
-    .map(([st, th, en]) => ({ n: orders.filter(o => o.status === st).length, th: th, en: en })).filter(c => c.n > 0);
+  // Later orders that haven't reached their start time sit in their own group at the bottom, with no Ready button.
+  const key = nowKey();
+  const waiting = o => isWaiting(o, key);
+  const working = orders.filter(o => !waiting(o));
+  const later = orders.filter(waiting);
 
-  const rows = orders.slice(0, BOARD_MAX).map(o => {
-    const step = nextStep(o.status);
+  const counts = [[STATUS.new, 'ใหม่', 'New'], [STATUS.accepted, 'ยืนยันแล้ว', 'Accepted'], [STATUS.ready, 'พร้อมรับ', 'Ready']]
+    .map(([st, th, en]) => ({ n: working.filter(o => o.status === st).length, th: th, en: en })).filter(c => c.n > 0);
+  if (later.length) counts.push({ n: later.length, th: 'ล่วงหน้า', en: 'Later' });
+
+  const row = o => {
+    const step = stepFor(o, key);
     const cups = o.items.reduce((sum, l) => sum + Number((l.match(/x(\d+)$/) || [0, 1])[1]), 0);
     const name = o.name.length > 12 ? o.name.slice(0, 11) + '…' : o.name;
+    const box = { type: 'box', layout: 'vertical', width: '96px', height: '48px', justifyContent: 'center', alignItems: 'center', cornerRadius: '8px' };
+    const right = step
+      ? Object.assign(box, { backgroundColor: BRAND_COLOR,
+          action: tapAction(`${step.th} / ${step.en}`, `${step.action}:${o.id}:b`, `${ECHO_MARK} ${step.th} #${o.id}`),
+          contents: [ text(step.th, { weight: 'bold', color: '#FFFFFF', align: 'center' }),
+                      text(step.en, { size: 'sm', color: '#DCE5DF', align: 'center' }) ] })
+      // nothing to tap yet: show when the start alert comes
+      : Object.assign(box, { borderWidth: '1px', borderColor: '#D0D0D0',
+          contents: [ text('⏰ ' + shortPickup({ at: startKey(o) }, today), { size: 'sm', weight: 'bold', color: '#555555', align: 'center', wrap: false }),
+                      text('เริ่มทำ / Start', { size: 'xs', color: '#707070', align: 'center', wrap: false }) ] });
     return { type: 'box', layout: 'horizontal', spacing: '12px', alignItems: 'center', contents: [
       // tapping the left side opens the full card
       { type: 'box', layout: 'vertical', flex: 1, spacing: '4px', justifyContent: 'center',
         action: tapAction('ดู / View', `view:${o.id}`, `${ECHO_MARK} ดู #${o.id}`), contents: [
           text(`#${o.id}  ${name}`, { weight: 'bold', wrap: false }),
           text(`${shortPickup(o, today)} · ${cups} แก้ว · ฿${o.total}`, { size: 'sm', color: '#707070', wrap: false }) ] },
-      { type: 'box', layout: 'vertical', width: '96px', height: '48px', justifyContent: 'center', alignItems: 'center',
-        cornerRadius: '8px', backgroundColor: BRAND_COLOR,
-        action: tapAction(`${step.th} / ${step.en}`, `${step.action}:${o.id}:b`, `${ECHO_MARK} ${step.th} #${o.id}`),
-        contents: [ text(step.th, { weight: 'bold', color: '#FFFFFF', align: 'center' }),
-                    text(step.en, { size: 'sm', color: '#DCE5DF', align: 'center' }) ] },
+      right,
     ] };
-  });
+  };
 
   const body = [];
-  rows.forEach((row, i) => { if (i) body.push({ type: 'separator' }); body.push(row); });
+  const shown = working.concat(later).slice(0, BOARD_MAX);
+  shown.forEach((o, i) => {
+    if (i) body.push({ type: 'separator' });
+    if (waiting(o) && (i === 0 || !waiting(shown[i - 1]))) body.push(text('ล่วงหน้า / Later', { size: 'sm', weight: 'bold', color: '#707070' }));
+    body.push(row(o));
+  });
+  const rows = shown;
   if (!rows.length) body.push(text('ไม่มีออเดอร์ค้าง / Nothing pending ✓', { weight: 'bold' }));
   if (orders.length > BOARD_MAX) {
     body.push(text(`อีก ${orders.length - BOARD_MAX} ออเดอร์ ทำรายการข้างบนก่อน / ${orders.length - BOARD_MAX} more, finish the top ones first`,
@@ -600,13 +731,16 @@ function boardText(orders) {
 // ========== The order card (buttons in LINE) ==========
 // One card is used for the new-order alert and for every answer after a tap,
 // so the order always looks the same and shows only the next step.
+// o.startNow = this is the "time to start" alert for a later order, not the first alert.
 function orderText(o) {
-  const title = o.status === STATUS.new ? 'ออเดอร์ใหม่ / New order' : 'ออเดอร์ / Order';
+  const title = o.startNow ? '⏰ ถึงเวลาเริ่มทำ / Time to start' : (o.status === STATUS.new ? 'ออเดอร์ใหม่ / New order' : 'ออเดอร์ / Order');
+  const key = nowKey();
   return `🧾 ${title} #${o.id} · ${o.status}\n` +
     `${o.name} ${formatPhone(o.phone)}\n` +
     o.items.map(l => '• ' + l).join('\n') + '\n' +
     `รวม / Total: ${o.total} บาท\n` +
     `รับเวลา / Pickup: ${o.pickup || '-'}\n` +
+    (isWaiting(o, key) ? `เริ่มทำ / Start: ${shortPickup({ at: startKey(o) }, bangkokNow().today)} (แจ้งอีกครั้ง / alert again)\n` : '') +
     `ชำระเงิน / Payment: ${o.payment}` +
     (o.note ? `\nหมายเหตุ / Note: ${o.note}` : '');
 }
@@ -624,6 +758,7 @@ function orderCard(o) {
       text('รวม / Total', { flex: 1 }), text(`${o.total} บาท`, { weight: 'bold', align: 'end', flex: 0, wrap: false }) ] },
     field('รับเวลา / Pickup', o.pickup || '-'),
   ];
+  if (isWaiting(o, nowKey())) body.push(field('เริ่มทำ / Start (แจ้งอีกครั้ง / alert again)', shortPickup({ at: startKey(o) }, bangkokNow().today)));
   if (o.note) body.push(field('หมายเหตุ / Note', o.note));
   body.push(field('การชำระเงิน / Payment', o.payment));
 
@@ -631,7 +766,9 @@ function orderCard(o) {
     type: 'bubble',
     header: { type: 'box', layout: 'vertical', backgroundColor: BRAND_COLOR, paddingAll: '16px', spacing: '4px', contents: [
       text(`ออเดอร์ #${o.id} / Order #${o.id}`, { size: 'lg', weight: 'bold', color: '#FFFFFF' }),
-      text(o.status, { size: 'sm', color: '#DCE5DF' }) ] },
+      text(o.status, { size: 'sm', color: '#DCE5DF' }) ].concat(o.startNow ? [
+      text(o.status === STATUS.new && USE_ACCEPT_STEP ? '⏰ ถึงเวลาเริ่มทำ · ยังไม่ได้ยืนยัน / Time to start · not accepted yet' : '⏰ ถึงเวลาเริ่มทำ / Time to start',
+           { size: 'sm', weight: 'bold', color: '#FFFFFF' }) ] : []) },
     body: { type: 'box', layout: 'vertical', paddingAll: '16px', spacing: '12px', contents: body },
   };
   const buttons = cardButtons(o);
@@ -659,11 +796,14 @@ function tapAction(label, data, echo) {
 }
 
 // One big main button for the next step, one quiet Cancel. Nothing after Picked up / Cancelled.
+// A later order that is still waiting for its start time gets only Accept (if new) and Cancel.
 function cardButtons(o) {
-  const step = nextStep(o.status);
-  if (!step) return [];
-  return [ cardButton(`${step.th} / ${step.en}`, `${step.action}:${o.id}`, true, `${ECHO_MARK} ${step.th} #${o.id}`),
-           cardButton('ยกเลิก / Cancel', `cancel:${o.id}`, false, `${ECHO_MARK} ยกเลิก #${o.id}`) ];
+  if (o.status === STATUS.picked || o.status === STATUS.cancelled) return [];
+  const step = stepFor(o, nowKey());
+  const cancel = cardButton('ยกเลิก / Cancel', `cancel:${o.id}`, false, `${ECHO_MARK} ยกเลิก #${o.id}`);
+  return step
+    ? [ cardButton(`${step.th} / ${step.en}`, `${step.action}:${o.id}`, true, `${ECHO_MARK} ${step.th} #${o.id}`), cancel ]
+    : [ cancel ];
 }
 
 // A tappable box (48px tall, easy to hit) instead of LINE's thinner standard button.
@@ -688,14 +828,19 @@ function pushToAdmins(text) {
   getAdmins().forEach(to => lineApi('push', { to: to, messages: [{ type: 'text', text: text }] }));
 }
 
-// New order alert with buttons. If LINE refuses the card for any reason, send the plain text version
-// instead, so the shop never misses an order.
+// Order alert with buttons (the first alert, or the start alert for a later order). If LINE refuses the card for any
+// reason, send the plain text version instead, so the shop never misses an order.
+// Returns how many owners got a message (0 = nobody, the caller may try again).
+const TYPED = { accept: ['รับ', 'accept'], ready: ['เสร็จ', 'ready'], picked: ['รับแล้ว', 'picked'] };
 function pushOrderCard(o) {
+  const step = stepFor(o, nowKey());
+  const hint = step ? `\n\nตอบ / Reply "${TYPED[step.action][0]} ${o.id}" หรือ / or "${TYPED[step.action][1]} ${o.id}"` : '';
+  let delivered = 0;
   getAdmins().forEach(to => {
-    if (lineApi('push', { to: to, messages: [orderCard(o)] })) return;
-    const hint = `\n\nตอบ / Reply "รับ ${o.id}" หรือ / or "accept ${o.id}"`;
-    lineApi('push', { to: to, messages: [{ type: 'text', text: orderText(o) + hint }] });
+    if (lineApi('push', { to: to, messages: [orderCard(o)] }) ||
+        lineApi('push', { to: to, messages: [{ type: 'text', text: orderText(o) + hint }] })) delivered++;
   });
+  return delivered;
 }
 
 // Reply = answering the owner's message. Free, doesn't use the quota.

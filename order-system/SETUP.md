@@ -40,7 +40,8 @@ You need: a Google account, a LINE account.
 2. Add your Official Account as a friend in LINE (QR code on manager.line.biz).
 3. In the chat, send: `ลงทะเบียน 4821` or `register 4821` (your REGISTER_CODE). It should reply "ลงทะเบียนแล้ว ✓ / Registered ✓".
 4. In Apps Script, pick `testLineMessage` in the function menu and press **Run**. You should get "ทดสอบ ✓" in LINE.
-5. Pick `setupDailySummary` and press **Run** once. Now you get a summary at 21:00 every day.
+5. Pick `setupDailySummary` and press **Run** once. Now you get a summary at 21:00 every day. The summary also shows how many of LINE's free monthly messages are used.
+6. Pick `setupStartAlerts` and press **Run** once. This turns on the second alert for "order for later" (see below). It needs no extra permission.
 
 ## Part 4: Turn on the order page
 
@@ -59,6 +60,17 @@ Every new order arrives as a card with a big button for the next step:
 - **Picked up** marks the order paid (everyone pays at the shop for now). Daily sales count only picked-up orders.
 - If LINE ever refuses the card, the shop gets the same order as plain text with the typed command to reply.
 - The sheet has a **Payment** column and a **Pickup sort key** column (used to sort the board). Old sheets get both headers added automatically.
+
+## Order for later: two alerts, and a lock until it is time
+An ASAP order sends one card, as above. An **order for later** sends two:
+1. **When it is placed**: a card with only **รับ / Accept** and **ยกเลิก / Cancel**, plus a line "เริ่มทำ / Start: 06:45". The shop sees it a day ahead and can say no (out of milk, shut that day).
+2. **At pickup time minus `LEAD_MIN`** (07:00 pickup → 06:45): the card again, with **พร้อมรับ / Ready** unlocked. If the order was never accepted, the card says "not accepted yet".
+
+Until the start time, Ready and Picked up are locked, on old cards and typed commands too ("Too early, opens at 06:45"). On the order board these orders sit in their own **ล่วงหน้า / Later** group with a ⏰ time instead of a button. An order placed after its start time has already passed gets the full card at once.
+
+How it works: a timer (`sendStartAlerts`, every 5 minutes) checks the sheet. Apps Script timers are not exact, so an alert can be a few minutes late. Keep `LEAD_MIN` at 10 or more. If the timer is late, the lock lifts by the clock anyway, so the board still works. If LINE refuses the alert (for example the monthly limit is used up), the timer tries again 5 minutes later. The last sheet column, **Start alert (system)**, remembers where each order is. Leave it alone.
+
+**Cost:** a later order uses 2 LINE messages per owner instead of 1. Set `LEAD_MIN = 0` to turn the whole thing off (later orders then alert once, like ASAP ones).
 
 ## The order board (for a busy shop)
 Tap **ออเดอร์ / Orders** in the bar at the bottom of the chat (the Rich menu below), or type `ออเดอร์` / `orders`. You get one list of every active order, soonest pickup first, with one button per order for its next step. The list refreshes after every tap. Tap the left side of a row to open the full card. Done and cancelled orders drop off. It shows 10 rows, then "N more".
@@ -102,6 +114,7 @@ Everything a shop might want to change is at the top of `Code.gs` (section 1) an
 | Instant tap message `✓ รับ #3` | `Code.gs` | `TAP_ECHO` |
 | Shortcuts to Orders and Summary: `'bar'` (permanent bottom bar), `'chips'` (floating buttons that cover the last message), `'both'` or `'none'` | `Code.gs` | `SHORTCUTS`. After changing it: redeploy, then run `setupRichMenu` once (it adds or removes the bar to match) |
 | Rows on the board | `Code.gs` | `BOARD_MAX` |
+| Minutes before pickup for the second alert on "order for later" (0 = off, one alert only) | `Code.gs` | `LEAD_MIN`. After changing it: redeploy, then run `setupStartAlerts` once |
 
 After changing `Code.gs`, redeploy (see the limits below). After changing `index.html`, push and regenerate `live.html`.
 
@@ -112,6 +125,7 @@ After changing `Code.gs`, redeploy (see the limits below). After changing `index
 - To remove everyone: delete `ADMIN_IDS` in Script properties, then register again with a new code.
 
 ## Limits to tell clients
-- Each new order sends 1 LINE message per registered owner. LINE's free plan has a monthly limit (check the number in LINE OA Manager → plan). Replies to the owner's commands and button taps are free.
+- **LINE messages.** An ASAP order sends 1 message per registered owner. An "order for later" sends 2 per owner (the first alert, then the start alert). The daily summary sends 1 more per owner per day. LINE's free plan has a monthly limit (300 at the time of writing; check LINE OA Manager → plan). Replies to the owner's commands and button taps are free. The daily summary shows the number used this month and warns at 80%.
+- Rough sizing on the free plan with 1 owner (300 messages, minus about 30 for the daily summary): about 270 ASAP orders a month, or about 135 later orders. A shop with many orders needs a paid LINE plan, or the web order board add-on (a page on a tablet needs no LINE messages to show orders).
 - Changed `Code.gs`? **Deploy → Manage deployments → Edit → New version**, or the old code keeps running.
 - Keep `LINE_TOKEN` private. Never put it in the web page.
